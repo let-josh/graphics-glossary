@@ -5,13 +5,11 @@ export const setCameraPlanes = (
 	width: number,
 	height: number,
 ) => {
-	const halfWidth = 0.5 * width;
-	camera.left = -1 * halfWidth;
-	camera.right = halfWidth;
+	camera.left = -1 * width;
+	camera.right = width;
 
-	const halfHeight = 0.5 * height;
-	camera.top = halfHeight;
-	camera.bottom = -1 * halfHeight;
+	camera.top = height;
+	camera.bottom = -1 * height;
 
 	camera.updateProjectionMatrix();
 };

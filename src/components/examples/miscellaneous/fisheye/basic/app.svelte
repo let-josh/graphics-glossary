@@ -26,7 +26,7 @@
 		negz.src,
 	] as const;
 
-	const RESOLUTION = 1 << 10;
+	const RESOLUTION = 1 << 9;
 
 	const ZOOM = 100;
 
@@ -95,7 +95,7 @@
 
 	const rendererSize = new Vector2();
 
-	const dummyCamera = new PerspectiveCamera().translateOnAxis(axis, 1);
+	const dummyCamera = new PerspectiveCamera().translateOnAxis(axis, 1.5);
 	const orbit = new OrbitControls(dummyCamera);
 
 	onCleanup(() => {
@@ -120,9 +120,10 @@
 		const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
 				renderer.getSize(rendererSize);
+				rendererSize.multiplyScalar(0.5);
 				setCameraPlanes(orthoCamera, rendererSize.width, rendererSize.height);
 
-				const radius = 0.5 * (Math.hypot(...rendererSize) / orthoCamera.zoom);
+				const radius = Math.hypot(...rendererSize) / orthoCamera.zoom;
 				sphere.scale.setScalar(radius);
 			}
 			cubeCamera.position.copy(dummyCamera.position);
