@@ -47,7 +47,7 @@
 	const scene = new Scene();
 
 	const axis = new Vector3(1, 1, 1).normalize();
-	const camera = new PerspectiveCamera().translateOnAxis(axis, 2);
+	const camera = new PerspectiveCamera().translateOnAxis(axis, 3);
 	const orbit = new OrbitControls(camera);
 
 	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
@@ -59,7 +59,7 @@
 	const scenePass = pass(scene, camera);
 	const output = scenePass.getTextureNode();
 
-	const horizontalFOV = 120;
+	const horizontalFOV = 90;
 	const height = uniform(0);
 	const strength = uniform(1);
 	const cylindricalRatio = uniform(0.5);
@@ -93,7 +93,7 @@
 		class="absolute top-2 right-2"
 		{@attach pane(
 			{
-				title: "controls",
+				title: "post-processing uniforms",
 			},
 			(pane) => {
 				pane.addBinding(strength, "value", {

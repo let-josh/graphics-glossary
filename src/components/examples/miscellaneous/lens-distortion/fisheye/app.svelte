@@ -2,29 +2,11 @@
 	lang="ts"
 	module
 >
-	import negx from "@assets/cubemaps/Lycksele/negx.jpg";
-	import negy from "@assets/cubemaps/Lycksele/negy.jpg";
-	import negz from "@assets/cubemaps/Lycksele/negz.jpg";
-	import posx from "@assets/cubemaps/Lycksele/posx.jpg";
-	import posy from "@assets/cubemaps/Lycksele/posy.jpg";
-	import posz from "@assets/cubemaps/Lycksele/posz.jpg";
-
 	const dracoLoader = new DRACOLoader().setDecoderPath(
 		"https://www.gstatic.com/draco/v1/decoders/",
 	);
 	const gltfLoader = new GLTFLoader();
 	gltfLoader.setDRACOLoader(dracoLoader);
-
-	const cubeLoader = new CubeTextureLoader();
-
-	const cubeMapFiles = [
-		posx.src,
-		negx.src,
-		posy.src,
-		negy.src,
-		posz.src,
-		negz.src,
-	] as const;
 
 	const RESOLUTION = 1 << 9;
 
@@ -48,7 +30,6 @@
 	import {
 		CubeCamera,
 		CubeRenderTarget,
-		CubeTextureLoader,
 		Mesh,
 		MeshBasicMaterial,
 		OrthographicCamera,
@@ -64,17 +45,6 @@
 	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
 		scene.add(gltf.scene);
 	});
-
-	const cubeEnvironmentTexture = cubeLoader
-		.loadAsync(cubeMapFiles)
-		.then((texture) => {
-			const last = scene.environment;
-			scene.environment = texture;
-			return () => {
-				scene.environment = last;
-				texture.dispose();
-			};
-		});
 
 	const orthoCamera = new OrthographicCamera().translateZ(ZOOM);
 	orthoCamera.zoom = ZOOM;
@@ -102,9 +72,6 @@
 		renderTarget.dispose();
 		geometry.dispose();
 		material.dispose();
-		cubeEnvironmentTexture.then((cleanup) => {
-			cleanup();
-		});
 	});
 </script>
 
