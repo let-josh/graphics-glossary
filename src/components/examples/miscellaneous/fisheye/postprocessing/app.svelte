@@ -24,7 +24,6 @@
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 	import {
 		dot,
-		oneMinus,
 		pass,
 		screenSize,
 		sqrt,
@@ -47,14 +46,13 @@
 
 	const scene = new Scene();
 
-	const box = new Box3();
 	const axis = new Vector3(1, 1, 1).normalize();
 	const camera = new PerspectiveCamera().translateOnAxis(axis, 2);
 	const orbit = new OrbitControls(camera);
 
 	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
 		scene.add(gltf.scene);
-		box.setFromObject(gltf.scene).getCenter(orbit.target);
+		new Box3().setFromObject(gltf.scene).getCenter(orbit.target);
 		orbit.update();
 	});
 
@@ -64,7 +62,7 @@
 	const horizontalFOV = 120;
 	const height = uniform(0);
 	const strength = uniform(1);
-	const cylindricalRatio = uniform(2);
+	const cylindricalRatio = uniform(0.5);
 
 	const scaledHeight = strength.mul(height);
 	const aspectRatio = screenSize.x.div(screenSize.y);
@@ -108,7 +106,7 @@
 				pane.addBinding(cylindricalRatio, "value", {
 					min: 0,
 					max: 4,
-					step: 1,
+					step: 0.5,
 					label: "cylindrical ratio",
 				});
 			},
