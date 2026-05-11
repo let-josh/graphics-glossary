@@ -20,6 +20,7 @@
 
 	import { controls } from "@attachments/controls";
 
+	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraPlanes } from "@functions/setCameraPlanes";
@@ -49,7 +50,7 @@
 	const orthoCamera = new OrthographicCamera().translateZ(ZOOM);
 	orthoCamera.zoom = ZOOM;
 
-	const renderTarget = new CubeRenderTarget(RESOLUTION);
+	const renderTarget = createDisposed(CubeRenderTarget, RESOLUTION);
 
 	const cubeCamera = new CubeCamera(
 		orthoCamera.near,
@@ -57,8 +58,8 @@
 		renderTarget,
 	);
 
-	const geometry = new SphereGeometry();
-	const material = new MeshBasicMaterial({
+	const geometry = createDisposed(SphereGeometry);
+	const material = createDisposed(MeshBasicMaterial, {
 		envMap: renderTarget.texture,
 	});
 	const sphere = new Mesh(geometry, material);

@@ -142,17 +142,23 @@
 		videoTexture.flipY = false;
 		videoTexture.colorSpace = SRGBColorSpace;
 
-		material.map = videoTexture;
-
 		const videoSrcSet = streamPromise.then((stream) => {
+			const lastMap = material.map;
+			material.map = videoTexture;
+			const lastSrcObject = video.srcObject;
 			video.srcObject = stream;
 			video.play();
+			return () => {
+				material.map = lastMap;
+				video.pause();
+				video.srcObject = lastSrcObject;
+				videoTexture.dispose();
+			};
 		});
 
 		return () => {
-			videoSrcSet.then(() => {
-				video.pause();
-				videoTexture.dispose();
+			videoSrcSet.then((cleanup) => {
+				cleanup();
 			});
 		};
 	}}
