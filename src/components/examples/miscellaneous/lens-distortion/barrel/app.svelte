@@ -76,16 +76,16 @@
 
 	const vUVDot = sqrt(ny).mul(vec2(cylAspectRatio, 1)).mul(signedUV);
 
-	const vUv = vertexStage(
-		vec3(0.5, 0.5, 1.0)
-			.mul(z)
-			.add(vec3(-0.5, -0.5, 0))
-			.add(vec3(uv(), 0)),
-	);
+	const vUv = vec3(0.5, 0.5, 1.0)
+		.mul(z)
+		.add(vec3(-0.5, -0.5, 0))
+		.add(vec3(uv(), 0));
 
 	const _uv = dot(vUVDot, vUVDot)
 		.mul(vec3(-0.5, -0.5, -1.0))
 		.add(vUv);
+
+	const UV = vertexStage(_uv.div(_uv.z));
 </script>
 
 <div class="relative">
@@ -122,7 +122,8 @@
 			});
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = texture(output, _uv.div(_uv.z));
+			renderPipeline.outputNode = texture(output, UV);
+			renderPipeline.outputNode;
 
 			const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
