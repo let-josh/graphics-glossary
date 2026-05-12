@@ -19,9 +19,11 @@
 
 	import { resize } from "@functions/resize";
 
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+	import {
+		DRACOLoader,
+		GLTFLoader,
+		OrbitControls,
+	} from "three/examples/jsm/Addons.js";
 	import {
 		dot,
 		pass,
@@ -93,7 +95,7 @@
 		class="absolute top-2 right-2"
 		{@attach pane(
 			{
-				title: "post-processing uniforms",
+				title: "uniforms",
 			},
 			(pane) => {
 				pane.addBinding(strength, "value", {

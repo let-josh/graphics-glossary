@@ -87,8 +87,7 @@
 
 		const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
-				renderer.getSize(rendererSize);
-				rendererSize.multiplyScalar(0.5);
+				renderer.getSize(rendererSize).multiplyScalar(0.5);
 				setCameraPlanes(orthoCamera, rendererSize.width, rendererSize.height);
 
 				const radius = Math.hypot(...rendererSize) / orthoCamera.zoom;

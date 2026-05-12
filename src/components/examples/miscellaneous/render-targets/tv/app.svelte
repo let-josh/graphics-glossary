@@ -31,8 +31,6 @@
 
 	const rendererSize = new Vector2();
 
-	const center = new Vector3();
-
 	const size = new Vector3();
 
 	const RENDER_TARGET_CAMERA_TRANSLATION_AMOUNT = 3;
@@ -59,6 +57,7 @@
 		RenderTarget,
 		SRGBColorSpace,
 		Scene,
+		Texture,
 		Vector2,
 		Vector3,
 		VideoTexture,
@@ -92,17 +91,18 @@
 
 	const positionAttribute = screenMesh.geometry.getAttribute("position");
 
-	const box = boxFromIndexedPositionAttribute(index, positionAttribute);
-	box.getCenter(center);
-	box.getSize(size);
-
-	const camera = new PerspectiveCamera();
 	const axis = new Vector3(0, 0.5, 1).normalize();
-	camera.translateOnAxis(axis, CAMERA_TRANSLATION_AMOUNT);
-
+	const camera = new PerspectiveCamera().translateOnAxis(
+		axis,
+		CAMERA_TRANSLATION_AMOUNT,
+	);
 	const orbit = new OrbitControls(camera);
-	orbit.target = center;
+
+	const box = boxFromIndexedPositionAttribute(index, positionAttribute);
+	box.getCenter(orbit.target);
 	orbit.update();
+
+	box.getSize(size);
 
 	const streamPromise = navigator.mediaDevices.getUserMedia({
 		video: {
@@ -119,11 +119,15 @@
 		map: renderTarget.texture,
 	});
 	const plane = new Mesh(screenGeometry, screenMaterial);
-	plane.position.copy(center);
+	plane.position.copy(orbit.target);
 	scene.add(plane);
 
 	const geometry = createDisposed(BoxGeometry);
-	const material = createDisposed(MeshBasicMaterial);
+
+	const dummyTexture = createDisposed(Texture);
+	const material = createDisposed(MeshBasicMaterial, {
+		map: dummyTexture,
+	});
 
 	const mesh = new Mesh(geometry, material);
 	const renderTargetScene = new Scene().add(mesh);
