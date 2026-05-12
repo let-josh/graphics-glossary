@@ -129,7 +129,7 @@
 		)}
 	/>
 	<canvas
-		class="aspect-square"
+		class="aspect-square md:md:aspect-video"
 		bind:clientWidth={canvasSize.width}
 		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}

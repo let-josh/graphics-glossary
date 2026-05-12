@@ -120,7 +120,7 @@
 </script>
 
 <canvas
-	class="aspect-square"
+	class="aspect-square md:md:aspect-video"
 	{@attach (canvas) => {
 		const renderer = new WebGPURenderer({
 			antialias: true,

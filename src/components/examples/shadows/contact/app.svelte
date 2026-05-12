@@ -126,7 +126,7 @@
 		})}
 	/>
 	<canvas
-		class="aspect-square"
+		class="aspect-square md:md:aspect-video"
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
 			const renderer = new WebGPURenderer({
