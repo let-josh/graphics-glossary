@@ -125,7 +125,6 @@
 
 			const renderPipeline = new RenderPipeline(renderer);
 			renderPipeline.outputNode = texture(output, UV);
-			renderPipeline.outputNode;
 
 			const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
