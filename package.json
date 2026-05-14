@@ -20,7 +20,7 @@
 		"astro": "^6.3.1",
 		"astro-expressive-code": "^0.41.7",
 		"sharp": "^0.34.5",
-		"svelte": "^5.55.5",
+		"svelte": "^5.55.7",
 		"tailwindcss": "^4.3.0",
 		"three": "^0.184.0",
 		"tweakpane": "^4.0.5",
