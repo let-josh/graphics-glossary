@@ -7,6 +7,12 @@ import { onCleanup } from "./onCleanup.svelte";
  *
  * must be called within an effect such as $effect.root or component initialization
  * creates an instance of `constructor` and calls its `dispose` method when the parent effect is destroyed
+
+ * @example
+ *
+ * ```ts
+ * const geometry = createDisposed(MeshBasicMaterial, { color: 'yellow' });
+ * ```
  */
 export const createDisposed = <
 	Disposable extends {
