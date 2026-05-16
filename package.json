@@ -24,7 +24,7 @@
 		"tailwindcss": "^4.3.0",
 		"three": "^0.184.0",
 		"tweakpane": "^4.0.5",
-		"typescript": "^6.0.3",
+		"typescript": "^5.9.3",
 		"wrangler": "^4.90.0"
 	},
 	"devDependencies": {
