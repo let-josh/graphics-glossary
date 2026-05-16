@@ -33,7 +33,6 @@
 		select,
 		texture,
 		uniform,
-		uv,
 		vec2,
 		vec4,
 	} from "three/tsl";
@@ -72,13 +71,13 @@
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
-	const kernelSize = 5;
+	const size = 3;
 
 	const enabled = uniform(true);
 
 	const main = Fn(() => {
 		const q1 = sample(tex, {
-			kernelSize,
+			size,
 			offset: vec2(0, 0),
 		});
 
@@ -86,8 +85,8 @@
 		const minStd = q1.w;
 
 		const q2 = sample(tex, {
-			kernelSize,
-			offset: vec2(-1 * kernelSize, kernelSize),
+			size,
+			offset: vec2(-1 * size, size),
 		});
 
 		If(q2.w.lessThan(minStd), () => {
@@ -96,8 +95,8 @@
 		});
 
 		const q3 = sample(tex, {
-			kernelSize,
-			offset: vec2(-1 * kernelSize, -1 * kernelSize),
+			size,
+			offset: vec2(-1 * size, -1 * size),
 		});
 
 		If(q3.w.lessThan(minStd), () => {
@@ -106,8 +105,8 @@
 		});
 
 		const q4 = sample(tex, {
-			kernelSize,
-			offset: vec2(kernelSize, -1 * kernelSize),
+			size,
+			offset: vec2(size, -1 * size),
 		});
 
 		If(q4.w.lessThan(minStd), () => {
@@ -115,7 +114,7 @@
 			color.assign(q4.rgb);
 		});
 
-		return select(enabled, vec4(color, 1.0), texture(tex, uv()));
+		return vec4(color, 1.0);
 	});
 
 	let rotationEnabled = {
@@ -155,7 +154,7 @@
 			});
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = main();
+			renderPipeline.outputNode = select(enabled, main(), tex);
 
 			const rotationSpeed = Math.PI / 300;
 

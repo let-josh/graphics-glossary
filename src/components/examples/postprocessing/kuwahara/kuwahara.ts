@@ -14,20 +14,22 @@ import {
 import type { Node, TextureNode } from "three/webgpu";
 
 type Options = {
-	kernelSize: number;
+	size: number;
 	offset: Node<"vec2">;
 };
 
-export const sample = /*@__PURE__*/ Fn(
-	([tex, options = {}]: [TextureNode, Partial<Options>]): Node<"vec4"> => {
-		const kernelSize = options.kernelSize ?? 5;
-		const offset = options.offset ?? vec2(0, 0);
+export const sample = /*#__PURE__*/ Fn(
+	([tex, { offset = vec2(0, 0), size = 5 } = {}]: [
+		tex: TextureNode,
+		options?: Partial<Options>,
+	]): Node<"vec4"> => {
 		const luminanceSum = float(0);
 		const luminanceSum2 = float(0);
 		const colorSum = vec3(0);
 		const count = uint(0);
-		Loop(kernelSize, ({ i: y }) => {
-			Loop(kernelSize, ({ i: x }) => {
+
+		Loop(size, ({ i: y }) => {
+			Loop(size, ({ i: x }) => {
 				const xy = vec2(x, y).add(offset);
 				const sample = texture(
 					tex,

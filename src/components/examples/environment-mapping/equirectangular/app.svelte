@@ -30,7 +30,7 @@
 	});
 
 	const scene = new Scene();
-	scene.backgroundNode = texture(equirectTexture, equirectUV(), 0);
+	scene.backgroundNode = texture(equirectTexture, equirectUV());
 
 	const camera = new PerspectiveCamera().translateZ(CAMERA_TRANSLATION_AMOUNT);
 
