@@ -10,6 +10,8 @@
 </script>
 
 <script lang="ts">
+	import { sample } from "./kuwahara";
+
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
@@ -26,24 +28,15 @@
 	} from "three/examples/jsm/Addons.js";
 	import {
 		Fn,
-		Loop,
-		bvec4,
-		float,
-		int,
-		luminance,
-		min,
+		If,
 		pass,
-		screenCoordinate,
-		screenSize,
 		select,
 		texture,
 		uniform,
 		uv,
 		vec2,
-		vec3,
 		vec4,
 	} from "three/tsl";
-	import type { Node } from "three/webgpu";
 	import {
 		EquirectangularReflectionMapping,
 		PerspectiveCamera,
@@ -77,86 +70,52 @@
 	});
 
 	const scenePass = pass(scene, camera);
-	const output = scenePass.getTextureNode();
+	const tex = scenePass.getTextureNode();
 
-	const kernelSize = 3;
-	const windowSize = int(kernelSize).mul(2).sub(1);
-	const quadrantSize = windowSize.div(2);
-	const sampleCount = quadrantSize.mul(quadrantSize);
-
-	const stdAndAverageColor = Fn(
-		({
-			kernelSize,
-			offset,
-			center = screenCoordinate,
-		}: {
-			kernelSize: number;
-			offset: Node<"vec2">;
-			center?: Node<"vec2">;
-		}): Node<"vec4"> => {
-			const luminanceSum = float(0);
-			const luminanceSum2 = float(0);
-			const colorSum = vec3(0);
-			Loop(kernelSize, ({ i: y }) => {
-				Loop(kernelSize, ({ i: x }) => {
-					const sample = texture(
-						output,
-						center.add(x, y).add(offset).div(screenSize),
-					).rgb;
-					const lum = luminance(sample);
-					luminanceSum.addAssign(lum);
-					luminanceSum2.addAssign(lum.mul(lum));
-					colorSum.addAssign(sample);
-				});
-			});
-
-			const mean = luminanceSum.div(sampleCount);
-			const std = luminanceSum2.div(sampleCount.sub(mean.mul(mean)));
-
-			return vec4(colorSum.div(sampleCount), std);
-		},
-	);
+	const kernelSize = 5;
 
 	const enabled = uniform(true);
 
 	const main = Fn(() => {
-		const q1 = stdAndAverageColor({
+		const q1 = sample(tex, {
+			kernelSize,
 			offset: vec2(0, 0),
-			kernelSize,
 		});
-		const q2 = stdAndAverageColor({
+
+		const color = q1.rgb;
+		const minStd = q1.w;
+
+		const q2 = sample(tex, {
+			kernelSize,
 			offset: vec2(-1 * kernelSize, kernelSize),
-			kernelSize,
 		});
-		const q3 = stdAndAverageColor({
+
+		If(q2.w.lessThan(minStd), () => {
+			minStd.assign(q2.w);
+			color.assign(q2.rgb);
+		});
+
+		const q3 = sample(tex, {
+			kernelSize,
 			offset: vec2(-1 * kernelSize, -1 * kernelSize),
-			kernelSize,
 		});
-		const q4 = stdAndAverageColor({
+
+		If(q3.w.lessThan(minStd), () => {
+			minStd.assign(q3.w);
+			color.assign(q3.rgb);
+		});
+
+		const q4 = sample(tex, {
+			kernelSize,
 			offset: vec2(kernelSize, -1 * kernelSize),
-			kernelSize,
 		});
 
-		const minStd = min(q1.w, q2.w, q3.w, q4.w);
-		const q = bvec4(
-			q1.w.equal(minStd),
-			q2.w.equal(minStd),
-			q3.w.equal(minStd),
-			q4.w.equal(minStd),
-		).toVec4();
+		If(q4.w.lessThan(minStd), () => {
+			minStd.assign(q4.w);
+			color.assign(q4.rgb);
+		});
 
-		return select(
-			enabled,
-			vec4(
-				q1.rgb
-					.mul(q.x)
-					.add(q2.rgb.mul(q.y))
-					.add(q3.rgb.mul(q.z))
-					.add(q4.rgb.mul(q.w)),
-				1.0,
-			),
-			texture(output, uv()),
-		);
+		return select(enabled, vec4(color, 1.0), texture(tex, uv()));
 	});
 
 	let rotationEnabled = {
