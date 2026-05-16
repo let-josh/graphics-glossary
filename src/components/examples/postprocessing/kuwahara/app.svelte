@@ -2,7 +2,6 @@
 	lang="ts"
 	module
 >
-	import gltfUrl from "@assets/gltfs/IridescenceAbalone.glb";
 	import hdrUrl from "@assets/hdrs/suburban_garden_1k.hdr";
 
 	const hdrLoader = new HDRLoader();
@@ -17,6 +16,7 @@
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
+	import { loadAbalone } from "@functions/loadAbalone";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
@@ -54,7 +54,7 @@
 		});
 	});
 
-	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
+	loadAbalone(gltfLoader).then((gltf) => {
 		scene.add(gltf.scene);
 	});
 
