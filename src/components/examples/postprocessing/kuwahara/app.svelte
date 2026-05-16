@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-	import { sample } from "./kuwahara";
+	import { kuwahara } from "./kuwahara";
 
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
@@ -26,16 +26,7 @@
 		HDRLoader,
 		OrbitControls,
 	} from "three/examples/jsm/Addons.js";
-	import {
-		Fn,
-		If,
-		pass,
-		select,
-		texture,
-		uniform,
-		vec2,
-		vec4,
-	} from "three/tsl";
+	import { pass, select, uniform } from "three/tsl";
 	import {
 		EquirectangularReflectionMapping,
 		PerspectiveCamera,
@@ -71,51 +62,8 @@
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
-	const size = 3;
-
-	const enabled = uniform(true);
-
-	const main = Fn(() => {
-		const q1 = sample(tex, {
-			size,
-			offset: vec2(0, 0),
-		});
-
-		const color = q1.rgb;
-		const minStd = q1.w;
-
-		const q2 = sample(tex, {
-			size,
-			offset: vec2(-1 * size, size),
-		});
-
-		If(q2.w.lessThan(minStd), () => {
-			minStd.assign(q2.w);
-			color.assign(q2.rgb);
-		});
-
-		const q3 = sample(tex, {
-			size,
-			offset: vec2(-1 * size, -1 * size),
-		});
-
-		If(q3.w.lessThan(minStd), () => {
-			minStd.assign(q3.w);
-			color.assign(q3.rgb);
-		});
-
-		const q4 = sample(tex, {
-			size,
-			offset: vec2(size, -1 * size),
-		});
-
-		If(q4.w.lessThan(minStd), () => {
-			minStd.assign(q4.w);
-			color.assign(q4.rgb);
-		});
-
-		return vec4(color, 1.0);
-	});
+	const uEnabled = uniform(true);
+	const uSize = uniform(3);
 
 	let rotationEnabled = {
 		value: false,
@@ -138,8 +86,15 @@
 					title: "uniforms",
 				});
 
-				uniformsFolder.addBinding(enabled, "value", {
+				uniformsFolder.addBinding(uEnabled, "value", {
 					label: "enabled",
+				});
+
+				uniformsFolder.addBinding(uSize, "value", {
+					min: 1,
+					max: 5,
+					step: 1,
+					label: "size",
 				});
 			},
 		)}
@@ -154,7 +109,11 @@
 			});
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = select(enabled, main(), tex);
+			renderPipeline.outputNode = select(
+				uEnabled,
+				kuwahara(tex, { size: uSize.toInt() }),
+				tex,
+			);
 
 			const rotationSpeed = Math.PI / 300;
 
