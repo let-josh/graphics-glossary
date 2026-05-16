@@ -16,7 +16,7 @@ import {
 import type { Node, TextureNode } from "three/webgpu";
 
 type SampleOptions = {
-	size: Node<"int">;
+	size: Node<"int"> | number;
 	offset: Node<"vec2">;
 };
 
@@ -30,22 +30,36 @@ const sample = /*@__PURE__*/ Fn(
 		const colorSum = vec3(0);
 		const count = uint(0);
 
-		const end = size.toInt();
-
-		Loop({ start: int(0), end, type: "int", condition: "<" }, ({ i: y }) => {
-			Loop({ start: int(0), end, type: "int", condition: "<" }, ({ i: x }) => {
-				const xy = vec2(x, y).add(offset);
-				const sample = texture(
-					tex,
-					screenCoordinate.add(xy).div(screenSize),
-				).rgb;
-				const lum = luminance(sample);
-				luminanceSum.addAssign(lum);
-				luminanceSum2.addAssign(lum.mul(lum));
-				colorSum.addAssign(sample);
-				count.addAssign(1);
-			});
-		});
+		Loop(
+			{
+				start: int(0),
+				end: size,
+				type: "int",
+				condition: "<",
+			},
+			({ i: y }) => {
+				Loop(
+					{
+						start: int(0),
+						end: size,
+						type: "int",
+						condition: "<",
+					},
+					({ i: x }) => {
+						const xy = vec2(x, y).add(offset);
+						const sample = texture(
+							tex,
+							screenCoordinate.add(xy).div(screenSize),
+						).rgb;
+						const lum = luminance(sample);
+						luminanceSum.addAssign(lum);
+						luminanceSum2.addAssign(lum.mul(lum));
+						colorSum.addAssign(sample);
+						count.addAssign(1);
+					},
+				);
+			},
+		);
 
 		const mean = luminanceSum.div(count);
 		const std = luminanceSum2.div(count.sub(mean.mul(mean)));

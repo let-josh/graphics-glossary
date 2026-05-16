@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-	import { kuwahara } from "./kuwahara";
+	import { kuwahara } from "./tsl";
 
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
@@ -56,7 +56,6 @@
 
 	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
 		scene.add(gltf.scene);
-		return gltf;
 	});
 
 	const scenePass = pass(scene, camera);
