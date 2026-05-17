@@ -18,7 +18,7 @@ type Options = {
 	size: FloatOrNumber;
 };
 
-export const halftone = Fn(
+export const halftone = /*@__PURE__*/ Fn(
 	([tex, { radius = 0.5, size = 16 } = {}]: [
 		tex: TextureNode,
 		options?: Partial<Options>,
