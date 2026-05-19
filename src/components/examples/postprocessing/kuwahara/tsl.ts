@@ -16,7 +16,9 @@ import {
 import type { Node, TextureNode } from "three/webgpu";
 
 type SampleOptions = {
+	/** size of each sector/region in pixels */
 	size: Node<"int"> | number;
+	/** xy- offset to apply to the sector/region */
 	offset: Node<"vec2">;
 };
 

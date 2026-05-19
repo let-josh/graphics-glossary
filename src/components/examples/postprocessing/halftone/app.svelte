@@ -24,16 +24,19 @@
 		OrbitControls,
 		RoomEnvironment,
 	} from "three/examples/jsm/Addons.js";
-	import { pass, select, texture, uniform } from "three/tsl";
+	import { PI, pass, select, texture, uniform } from "three/tsl";
 	import {
+		Color,
 		PMREMGenerator,
 		PerspectiveCamera,
 		RenderPipeline,
 		Scene,
+		Vector4,
 		WebGPURenderer,
 	} from "three/webgpu";
 
 	const scene = new Scene();
+	scene.background = new Color("#00aaaa");
 	const camera = new PerspectiveCamera().translateZ(0.25);
 
 	const scenePass = pass(scene, camera);
@@ -46,10 +49,24 @@
 	const environment = createDisposed(RoomEnvironment);
 
 	const orbit = new OrbitControls(camera);
+	orbit.autoRotateSpeed = 1;
 
-	const radius = uniform(0.5);
-	const size = uniform(16);
+	const size = uniform(8);
+	const spacing = uniform(0.5);
+
 	const enabled = uniform(true);
+
+	const degrees = uniform(new Vector4(15, 45, 0, 75));
+	const strengths = uniform(new Vector4(0.7, 1, 1, 0.5));
+
+	const colorLabelsAndKeys = [
+		["cyan", "x"],
+		["magenta", "y"],
+		["yellow", "z"],
+		["black", "w"],
+	] as const;
+
+	const angles = degrees.mul(PI).div(180);
 </script>
 
 <div class="relative">
@@ -57,10 +74,20 @@
 		class="absolute top-2 right-2"
 		{@attach pane(
 			{
-				title: "uniforms",
+				title: "controls",
 			},
 			(pane) => {
-				pane.addBinding(size, "value", {
+				pane.addBinding(orbit, "autoRotate", {
+					label: "rotate camera",
+				});
+
+				const uniformsFolder = pane.addFolder({ title: "uniforms" });
+
+				uniformsFolder.addBinding(enabled, "value", {
+					label: "enabled",
+				});
+
+				uniformsFolder.addBinding(size, "value", {
 					label: "size",
 					options: {
 						"4": 4,
@@ -70,16 +97,38 @@
 					},
 				});
 
-				pane.addBinding(radius, "value", {
-					label: "radius",
-					min: 0,
+				uniformsFolder.addBinding(spacing, "value", {
+					label: "spacing",
 					max: 0.5,
+					min: 0.1,
 					step: 0.1,
 				});
 
-				pane.addBinding(enabled, "value", {
-					label: "enabled",
+				const strengthsFolder = uniformsFolder.addFolder({
+					title: "strengths",
 				});
+
+				for (const [label, key] of colorLabelsAndKeys) {
+					strengthsFolder.addBinding(strengths.value, key, {
+						min: 0,
+						max: 1,
+						step: 0.1,
+						label,
+					});
+				}
+
+				const degreesFolder = uniformsFolder.addFolder({
+					title: "degrees",
+				});
+
+				for (const [label, key] of colorLabelsAndKeys) {
+					degreesFolder.addBinding(degrees.value, key, {
+						min: 0,
+						max: 90,
+						step: 1,
+						label,
+					});
+				}
 			},
 		)}
 	/>
@@ -96,8 +145,10 @@
 			renderPipeline.outputNode = select(
 				enabled,
 				halftone(tex, {
-					radius,
+					angles,
 					size,
+					strengths,
+					spacing,
 				}),
 				texture(tex),
 			);
@@ -110,17 +161,26 @@
 					setCameraAspect(camera, aspect);
 				}
 
+				if (orbit.autoRotate) orbit.update();
+
 				renderPipeline.render();
 			});
 
-			promise.then(() => {
+			const pmremPromise = promise.then(() => {
 				const envMap = pmremGenerator.fromScene(environment).texture;
+				const last = scene.environment;
 				scene.environment = envMap;
+				return () => {
+					scene.environment = last;
+				};
 			});
 
 			return () => {
 				renderPipeline.dispose();
-				pmremGenerator.dispose();
+				pmremPromise.then((cleanup) => {
+					cleanup();
+					pmremGenerator.dispose();
+				});
 				promise.then(() => {
 					renderer.dispose();
 				});
