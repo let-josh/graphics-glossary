@@ -36,7 +36,7 @@
 	} from "three/webgpu";
 
 	const scene = new Scene();
-	scene.background = new Color("#00aaaa");
+	scene.background = new Color("magenta");
 	const camera = new PerspectiveCamera().translateZ(0.25);
 
 	const scenePass = pass(scene, camera);
@@ -67,6 +67,11 @@
 	] as const;
 
 	const angles = degrees.mul(PI).div(180);
+	const background = {
+		value: "#ee0066",
+	};
+	const backgroundColor = new Color(background.value);
+	scene.background = backgroundColor;
 </script>
 
 <div class="relative">
@@ -78,8 +83,15 @@
 			},
 			(pane) => {
 				pane.addBinding(orbit, "autoRotate", {
-					label: "rotate camera",
+					label: "rotate",
 				});
+				pane
+					.addBinding(background, "value", {
+						label: "background",
+					})
+					.on("change", (e) => {
+						if (!e.last) backgroundColor.setStyle(e.value);
+					});
 
 				const uniformsFolder = pane.addFolder({ title: "uniforms" });
 
@@ -104,29 +116,23 @@
 					step: 0.1,
 				});
 
-				const strengthsFolder = uniformsFolder.addFolder({
-					title: "strengths",
-				});
+				for (const [title, key] of colorLabelsAndKeys) {
+					const folder = uniformsFolder.addFolder({
+						title,
+					});
 
-				for (const [label, key] of colorLabelsAndKeys) {
-					strengthsFolder.addBinding(strengths.value, key, {
+					folder.addBinding(strengths.value, key, {
+						label: "strength",
 						min: 0,
 						max: 1,
 						step: 0.1,
-						label,
 					});
-				}
 
-				const degreesFolder = uniformsFolder.addFolder({
-					title: "degrees",
-				});
-
-				for (const [label, key] of colorLabelsAndKeys) {
-					degreesFolder.addBinding(degrees.value, key, {
+					folder.addBinding(degrees.value, key, {
+						label: "degrees",
 						min: 0,
 						max: 90,
 						step: 1,
-						label,
 					});
 				}
 			},
@@ -168,10 +174,10 @@
 
 			const pmremPromise = promise.then(() => {
 				const envMap = pmremGenerator.fromScene(environment).texture;
-				const last = scene.environment;
+				const lastEnvironment = scene.environment;
 				scene.environment = envMap;
 				return () => {
-					scene.environment = last;
+					scene.environment = lastEnvironment;
 				};
 			});
 
