@@ -49,6 +49,7 @@
 	const environment = createDisposed(RoomEnvironment);
 
 	const orbit = new OrbitControls(camera);
+	orbit.autoRotate = true;
 	orbit.autoRotateSpeed = 1;
 
 	const size = uniform(8);
