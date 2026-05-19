@@ -68,7 +68,7 @@
 
 	const angles = degrees.mul(PI).div(180);
 	const background = {
-		value: "#ee0066",
+		value: "#a37287",
 	};
 	const backgroundColor = new Color(background.value);
 	scene.background = backgroundColor;
