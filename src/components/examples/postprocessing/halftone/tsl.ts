@@ -2,7 +2,6 @@ import { DEG2RAD } from "three/src/math/MathUtils.js";
 import {
 	Fn,
 	If,
-	min,
 	rotate,
 	screenSize,
 	screenUV,
@@ -18,16 +17,14 @@ type FloatOrNumber = Node<"float"> | number;
 const rgb2cmyk = /*@__PURE__*/ Fn(
 	([rgb]: [rgb: Node<"vec3">]): Node<"vec4"> => {
 		const oneMinusRgb = rgb.oneMinus();
-		const k = min(oneMinusRgb.r, oneMinusRgb.g, oneMinusRgb.b);
+		const k = oneMinusRgb.r.min(oneMinusRgb.g).min(oneMinusRgb.b);
 		const cmy = vec3();
 
-		const oneMinusK = k.oneMinus();
-
-		If(oneMinusK.toBool(), () => {
-			cmy.assign(oneMinusRgb.sub(k).div(oneMinusK));
+		If(k.toBool(), () => {
+			cmy.assign(oneMinusRgb.sub(k).div(k.oneMinus()));
 		});
 
-		return vec4(cmy, k).clamp();
+		return vec4(cmy, k);
 	},
 );
 
