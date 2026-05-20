@@ -42,15 +42,21 @@
 
 	const orbit = new OrbitControls(camera);
 
-	const hdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+	const cleanupHdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
 		hdr.mapping = EquirectangularReflectionMapping;
+		const lastBackground = scene.background;
+		const lastEnvironment = scene.environment;
 		scene.background = scene.environment = hdr;
-		return hdr;
+		return () => {
+			scene.background = lastBackground;
+			scene.environment = lastEnvironment;
+			hdr.dispose();
+		};
 	});
 
 	onCleanup(() => {
-		hdr.then((hdr) => {
-			hdr.dispose();
+		cleanupHdr.then((cleanup) => {
+			cleanup();
 		});
 	});
 
@@ -64,8 +70,8 @@
 	const uEnabled = uniform(true);
 	const uSize = uniform(3);
 
-	let rotationEnabled = {
-		value: false,
+	const rotationEnabled = {
+		value: true,
 	};
 </script>
 

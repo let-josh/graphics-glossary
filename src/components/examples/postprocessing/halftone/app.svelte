@@ -36,7 +36,12 @@
 	} from "three/webgpu";
 
 	const scene = new Scene();
-	scene.background = new Color("magenta");
+	const background = {
+		value: "#a37287",
+	};
+	const backgroundColor = new Color(background.value);
+	scene.background = backgroundColor;
+
 	const camera = new PerspectiveCamera().translateZ(0.25);
 
 	const scenePass = pass(scene, camera);
@@ -68,11 +73,6 @@
 	] as const;
 
 	const angles = degrees.mul(PI).div(180);
-	const background = {
-		value: "#a37287",
-	};
-	const backgroundColor = new Color(background.value);
-	scene.background = backgroundColor;
 </script>
 
 <div class="relative">
@@ -94,7 +94,10 @@
 						if (!e.last) backgroundColor.setStyle(e.value);
 					});
 
-				const uniformsFolder = pane.addFolder({ title: "uniforms" });
+				const uniformsFolder = pane.addFolder({
+					expanded: false,
+					title: "uniforms",
+				});
 
 				uniformsFolder.addBinding(enabled, "value", {
 					label: "enabled",

@@ -37,6 +37,12 @@ export default defineConfig({
 					},
 				},
 				{
+					label: "Postprocessing",
+					autogenerate: {
+						directory: "postprocessing",
+					},
+				},
+				{
 					label: "Shadows",
 					autogenerate: {
 						directory: "shadows",
@@ -49,15 +55,15 @@ export default defineConfig({
 					},
 				},
 				{
-					label: "Miscellaneous",
-					autogenerate: {
-						directory: "miscellaneous",
-					},
-				},
-				{
 					label: "Environment Mapping",
 					autogenerate: {
 						directory: "environment-mapping",
+					},
+				},
+				{
+					label: "Miscellaneous",
+					autogenerate: {
+						directory: "miscellaneous",
 					},
 				},
 			],
