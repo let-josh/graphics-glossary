@@ -3,13 +3,13 @@ import {
 	Fn,
 	If,
 	rotate,
+	screenCoordinate,
 	screenSize,
-	screenUV,
 	texture,
 	vec3,
 	vec4,
 } from "three/tsl";
-import type { Node, TextureNode } from "three/webgpu";
+import type { Node, Texture, TextureNode } from "three/webgpu";
 import { Vector4 } from "three/webgpu";
 
 type FloatOrNumber = Node<"float"> | number;
@@ -44,18 +44,18 @@ export const halftone = /*@__PURE__*/ Fn(
 			spacing = 0.5,
 			size = 8,
 		} = {},
-	]: [tex: TextureNode, options?: Partial<Options>]) => {
-		const gridUv = Fn(([radians]: [radians: Node<"float">]): Node<"vec2"> => {
-			return rotate(screenUV.mul(screenSize), radians).div(size);
+	]: [tex: Texture | TextureNode, options?: Partial<Options>]) => {
+		const gridUv = Fn(([angle]: [angle: Node<"float">]): Node<"vec2"> => {
+			return rotate(screenCoordinate, angle).div(size);
 		});
 
 		const cellCenterUv = Fn(
-			([gridUv, radians]: [
+			([gridUv, angle]: [
 				gridUv: Node<"vec2">,
-				radians: Node<"float">,
+				angle: Node<"float">,
 			]): Node<"vec2"> => {
 				const cellCenter = gridUv.floor().add(0.5);
-				return rotate(cellCenter, radians).mul(size).div(screenSize);
+				return rotate(cellCenter, angle).mul(size).div(screenSize);
 			},
 		);
 

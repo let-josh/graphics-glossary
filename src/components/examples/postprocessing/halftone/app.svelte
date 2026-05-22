@@ -163,8 +163,6 @@
 				texture(tex),
 			);
 
-			const pmremGenerator = new PMREMGenerator(renderer);
-
 			const promise = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
@@ -176,6 +174,7 @@
 				renderPipeline.render();
 			});
 
+			const pmremGenerator = new PMREMGenerator(renderer);
 			const pmremPromise = promise.then(() => {
 				const envMap = pmremGenerator.fromScene(environment).texture;
 				const lastEnvironment = scene.environment;

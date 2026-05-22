@@ -13,7 +13,7 @@ import {
 	vec3,
 	vec4,
 } from "three/tsl";
-import type { Node, TextureNode } from "three/webgpu";
+import type { Node, Texture, TextureNode } from "three/webgpu";
 
 type SampleOptions = {
 	/** size of each sector/region in pixels */
@@ -24,7 +24,7 @@ type SampleOptions = {
 
 const sample = /*@__PURE__*/ Fn(
 	([tex, { offset = vec2(0, 0), size = int(5) } = {}]: [
-		tex: TextureNode,
+		tex: Texture | TextureNode,
 		options?: Partial<SampleOptions>,
 	]): Node<"vec4"> => {
 		const luminanceSum = float(0);
@@ -76,7 +76,7 @@ type Options = {
 
 export const kuwahara = /*@__PURE__*/ Fn(
 	([tex, { size = int(5) } = {}]: [
-		tex: TextureNode,
+		tex: Texture | TextureNode,
 		options?: Partial<Options>,
 	]) => {
 		const q1 = sample(tex, {
