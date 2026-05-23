@@ -170,7 +170,7 @@
 </video>
 <div class="relative">
 	<canvas
-		class="aspect-square md:md:aspect-video"
+		class="aspect-square md:aspect-video"
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
 			const renderer = new WebGPURenderer({

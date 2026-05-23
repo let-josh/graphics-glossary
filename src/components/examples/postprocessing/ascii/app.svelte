@@ -38,33 +38,12 @@
 		WebGPURenderer,
 	} from "three/webgpu";
 
-	const scene = new Scene();
-
-	loadAbalone(gltfLoader).then((gltf) => {
-		scene.add(gltf.scene);
-	});
-
-	const hdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
-		hdr.mapping = EquirectangularReflectionMapping;
-		return hdr;
-	});
-
 	// const chars =" %@";
 	const chars = " .:-=+*#%@";
 	// const chars = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
 
 	const charSize = 32;
 	const charsCount = chars.length;
-
-	const camera = new PerspectiveCamera().translateZ(0.25);
-	const orbit = new OrbitControls(camera);
-	// orbit.autoRotate = true;
-
-	const scenePass = pass(scene, camera);
-	const tex = scenePass.getTextureNode();
-
-	const pixelSize = uniform(16);
-	const enabled = uniform(true);
 
 	const osc = new OffscreenCanvas(charSize * charsCount, charSize);
 	const context = osc.getContext("2d");
@@ -81,6 +60,27 @@
 		const x = y + charSize * i;
 		context.fillText(char, x, y);
 	}
+
+	const scene = new Scene();
+
+	loadAbalone(gltfLoader).then((gltf) => {
+		scene.add(gltf.scene);
+	});
+
+	const hdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+		hdr.mapping = EquirectangularReflectionMapping;
+		return hdr;
+	});
+
+	const camera = new PerspectiveCamera().translateZ(0.25);
+	const orbit = new OrbitControls(camera);
+	// orbit.autoRotate = true;
+
+	const scenePass = pass(scene, camera);
+	const tex = scenePass.getTextureNode();
+
+	const pixelSize = uniform(16);
+	const enabled = uniform(true);
 
 	const charsTex = createDisposed(CanvasTexture, osc);
 	charsTex.flipY = false;
@@ -116,7 +116,7 @@
 		})}
 	/>
 	<canvas
-		class="aspect-square md:md:aspect-video"
+		class="aspect-square md:aspect-video"
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
 			const renderer = new WebGPURenderer({
