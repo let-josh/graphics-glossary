@@ -27,11 +27,10 @@
 		HDRLoader,
 		OrbitControls,
 	} from "three/examples/jsm/Addons.js";
-	import { pass, select, texture, uniform } from "three/tsl";
+	import { pass, pmremTexture, select, texture, uniform } from "three/tsl";
 	import {
 		CanvasTexture,
 		EquirectangularReflectionMapping,
-		PMREMGenerator,
 		PerspectiveCamera,
 		RenderPipeline,
 		Scene,
@@ -67,9 +66,10 @@
 		scene.add(gltf.scene);
 	});
 
-	const hdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+	hdrLoader.loadAsync(hdrUrl).then((hdr) => {
 		hdr.mapping = EquirectangularReflectionMapping;
-		return hdr;
+		const texture = pmremTexture(hdr);
+		scene.environmentNode = scene.backgroundNode = texture;
 	});
 
 	const camera = new PerspectiveCamera().translateZ(0.25);
@@ -142,25 +142,8 @@
 				renderPipeline.render();
 			});
 
-			const pmremGenerator = new PMREMGenerator(renderer);
-
-			const pmremPromise = Promise.all([hdr, promise]).then(([hdr]) => {
-				const target = pmremGenerator.fromEquirectangular(hdr);
-				const lastEnvironment = scene.environment;
-				const lastBackground = scene.background;
-				scene.environment = scene.background = target.texture;
-				return () => {
-					scene.background = lastBackground;
-					scene.environment = lastEnvironment;
-				};
-			});
-
 			return () => {
 				renderPipeline.dispose();
-				pmremPromise.then((cleanup) => {
-					cleanup();
-					pmremGenerator.dispose();
-				});
 				promise.then(() => {
 					renderer.dispose();
 				});
