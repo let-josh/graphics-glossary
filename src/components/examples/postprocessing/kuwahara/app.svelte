@@ -26,7 +26,7 @@
 		HDRLoader,
 		OrbitControls,
 	} from "three/examples/jsm/Addons.js";
-	import { pass, select, uniform } from "three/tsl";
+	import { mix, pass, screenUV, step, texture, uniform } from "three/tsl";
 	import {
 		EquirectangularReflectionMapping,
 		PerspectiveCamera,
@@ -41,6 +41,7 @@
 	const camera = new PerspectiveCamera().translateOnAxis(axis, 0.25);
 
 	const orbit = new OrbitControls(camera);
+	orbit.autoRotate = true;
 
 	const cleanupHdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
 		hdr.mapping = EquirectangularReflectionMapping;
@@ -67,12 +68,7 @@
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
-	const uEnabled = uniform(true);
 	const uSize = uniform(3);
-
-	const rotationEnabled = {
-		value: true,
-	};
 </script>
 
 <div class="relative">
@@ -84,15 +80,12 @@
 			},
 
 			(pane) => {
-				pane.addBinding(rotationEnabled, "value", {
+				pane.addBinding(orbit, "autoRotate", {
 					label: "rotate",
 				});
+
 				const uniformsFolder = pane.addFolder({
 					title: "uniforms",
-				});
-
-				uniformsFolder.addBinding(uEnabled, "value", {
-					label: "enabled",
 				});
 
 				uniformsFolder.addBinding(uSize, "value", {
@@ -114,20 +107,20 @@
 			});
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = select(
-				uEnabled,
-				kuwahara(tex, { size: uSize.toInt() }),
-				tex,
-			);
 
-			const rotationSpeed = Math.PI / 300;
+			renderPipeline.outputNode = mix(
+				kuwahara(tex, { size: uSize.toInt() }),
+				texture(tex),
+				step(0.5, screenUV.x),
+			);
 
 			const promise = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
 				}
-				scene.rotateX(rotationSpeed * +rotationEnabled.value);
+
+				if (orbit.autoRotate) orbit.update();
 
 				renderPipeline.render();
 			});

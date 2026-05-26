@@ -27,7 +27,15 @@
 		HDRLoader,
 		OrbitControls,
 	} from "three/examples/jsm/Addons.js";
-	import { pass, pmremTexture, select, texture, uniform } from "three/tsl";
+	import {
+		mix,
+		pass,
+		pmremTexture,
+		screenUV,
+		step,
+		texture,
+		uniform,
+	} from "three/tsl";
 	import {
 		CanvasTexture,
 		EquirectangularReflectionMapping,
@@ -79,8 +87,7 @@
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
-	const pixelSize = uniform(16);
-	const enabled = uniform(true);
+	const glyphSize = uniform(16);
 
 	const charsTex = createDisposed(CanvasTexture, osc);
 	charsTex.flipY = false;
@@ -100,20 +107,21 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane({ title: "uniforms" }, (pane) => {
-			pane.addBinding(enabled, "value", {
-				label: "enabled",
-			});
-			pane.addBinding(pixelSize, "value", {
-				label: "pixel size",
-				options: {
-					"4": 4,
-					"8": 8,
-					"16": 16,
-					"32": 32,
-				},
-			});
-		})}
+		{@attach pane(
+			{
+				title: "uniforms",
+			},
+			(pane) => {
+				pane.addBinding(glyphSize, "value", {
+					label: "glyph size",
+					options: {
+						"8": 8,
+						"16": 16,
+						"32": 32,
+					},
+				});
+			},
+		)}
 	/>
 	<canvas
 		class="aspect-square md:aspect-video"
@@ -126,12 +134,11 @@
 			charsTex.colorSpace = renderer.currentColorSpace;
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = select(
-				enabled,
-				ascii(tex, charsTex, charsCount, { pixelSize }),
+			renderPipeline.outputNode = mix(
+				ascii(tex, charsTex, charsCount, { glyphSize }),
 				texture(tex),
+				step(0.5, screenUV.x),
 			);
-
 			const promise = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;

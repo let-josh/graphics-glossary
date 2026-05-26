@@ -12,19 +12,19 @@ import type { Node, Texture, TextureNode } from "three/webgpu";
 type FloatOrNumber = Node<"float"> | number;
 
 type Options = {
-	pixelSize: FloatOrNumber;
+	glyphSize: FloatOrNumber;
 };
 
 export const ascii = /*@__PURE__*/ Fn(
-	([tex, charsTex, charsCount, { pixelSize = charsCount } = {}]: [
+	([tex, charsTex, charsCount, { glyphSize = charsCount } = {}]: [
 		tex: Texture | TextureNode,
 		charsTex: Texture | TextureNode,
 		charsCount: Node<"float"> | number,
 		options?: Partial<Options>,
 	]): Node<"vec4"> => {
-		const p = screenCoordinate.div(pixelSize);
+		const p = screenCoordinate.div(glyphSize);
 
-		const uv = p.floor().mul(pixelSize).div(screenSize);
+		const uv = p.floor().mul(glyphSize).div(screenSize);
 
 		const color = texture(tex, uv);
 

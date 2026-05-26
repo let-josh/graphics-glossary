@@ -24,7 +24,7 @@
 		OrbitControls,
 		RoomEnvironment,
 	} from "three/examples/jsm/Addons.js";
-	import { PI, pass, select, texture, uniform } from "three/tsl";
+	import { PI, mix, pass, screenUV, step, texture, uniform } from "three/tsl";
 	import {
 		Color,
 		PMREMGenerator,
@@ -152,8 +152,7 @@
 			});
 
 			const renderPipeline = new RenderPipeline(renderer);
-			renderPipeline.outputNode = select(
-				enabled,
+			renderPipeline.outputNode = mix(
 				halftone(tex, {
 					angles,
 					size,
@@ -161,6 +160,7 @@
 					spacing,
 				}),
 				texture(tex),
+				step(0.5, screenUV.x),
 			);
 
 			const promise = renderer.setAnimationLoop(() => {
