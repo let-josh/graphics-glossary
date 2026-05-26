@@ -2,46 +2,21 @@
 	lang="ts"
 	module
 >
-	const cameraTranslationAxis = new Vector3(1, 0.5, 1).normalize();
-	const cameraTranslationAmount = 5;
-	const tau = 2 * Math.PI;
-
-	const forwardsFrameCount = 18;
-
-	/**
-	 * number of frames to show during the last half of the rotation
-	 * equal to `frameCount` minus the first and last *frames*
-	 */
-	const backwardsFrameCount = forwardsFrameCount - 2;
-
-	const frameCount = forwardsFrameCount + backwardsFrameCount;
-
-	const spriteWidth = booImageMetadata.width / forwardsFrameCount;
-
-	/** the width of the image minus the width of the first and last sprites */
-	const extensionWidth = booImageMetadata.width - 2 * spriteWidth;
-
-	const yHat = new Vector3(0, 1, 0);
-
-	const cameraRotationSpeed = (1 / 180) * Math.PI;
+	const gltfLoader = new GLTFLoader();
 </script>
 
 <script lang="ts">
-	import booImageMetadata from "@assets/boo.png";
-
-	import { createDisposed } from "@functions/createDisposed.svelte";
-	import { loadImage } from "@functions/loadImage";
+	import { loadAbalone } from "@functions/loadAbalone";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import { GLTFLoader, RoomEnvironment } from "three/examples/jsm/Addons.js";
+	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import {
-		BoxGeometry,
-		CanvasTexture,
-		Mesh,
-		MeshNormalMaterial,
-		NearestFilter,
+		Box3,
+		PMREMGenerator,
 		PerspectiveCamera,
-		RepeatWrapping,
+		RenderTarget,
 		Scene,
 		Sprite,
 		SpriteMaterial,
@@ -49,74 +24,13 @@
 		WebGPURenderer,
 	} from "three/webgpu";
 
-	const booCanvas = new OffscreenCanvas(
-		booImageMetadata.width + extensionWidth,
-		booImageMetadata.height,
-	);
-	const booCanvasContext = booCanvas.getContext("2d");
+	const abalonePromise = loadAbalone(gltfLoader);
 
-	// the example can not work without the context so just throw and let the boundary handle it
-	if (booCanvasContext === null) {
-		throw new Error("texture context is null");
-	}
+	const mainScene = new Scene();
 
-	const canvasTexture = createDisposed(CanvasTexture, booCanvas);
-	canvasTexture.minFilter = NearestFilter;
-	canvasTexture.magFilter = NearestFilter;
-
-	canvasTexture.generateMipmaps = false;
-
-	canvasTexture.wrapS = RepeatWrapping;
-	canvasTexture.wrapT = RepeatWrapping;
-	canvasTexture.repeat.x = 1 / frameCount;
-
-	loadImage(
-		booImageMetadata.src,
-		booImageMetadata.width,
-		booImageMetadata.height,
-	).then((image) => {
-		booCanvasContext.drawImage(image, 0, 0);
-
-		booCanvasContext.save();
-		booCanvasContext.scale(-1, 1);
-
-		// draw the image flipped but leave out the first and last sprites
-		booCanvasContext.drawImage(
-			image,
-			spriteWidth,
-			0,
-			extensionWidth,
-			image.height,
-			-1 * image.width,
-			0,
-			-1 * extensionWidth,
-			image.height,
-		);
-		booCanvasContext.restore();
-
-		canvasTexture.needsUpdate = true;
-	});
-
-	const spriteMaterial = createDisposed(SpriteMaterial, {
-		map: canvasTexture,
-	});
-
-	const sprite = new Sprite(spriteMaterial).translateZ(1);
-
-	const material = createDisposed(MeshNormalMaterial);
-	const geometry = createDisposed(BoxGeometry);
-
-	const mesh = new Mesh(geometry, material).translateZ(-1);
-	mesh.scale.setScalar(0.5);
-
-	const scene = new Scene().add(sprite, mesh);
-
-	const camera = new PerspectiveCamera().translateOnAxis(
-		cameraTranslationAxis,
-		cameraTranslationAmount,
-	);
-
-	let lastOffset: number;
+	const axis = new Vector3(1, 1, 1).normalize();
+	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 5);
+	mainCamera.lookAt(mainScene.position);
 </script>
 
 <canvas
@@ -127,36 +41,79 @@
 			canvas,
 		});
 
-		const promise = renderer.setAnimationLoop(() => {
+		const loopPromise = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
 				const aspect = canvas.clientWidth / canvas.clientHeight;
-				setCameraAspect(camera, aspect);
+				setCameraAspect(mainCamera, aspect);
 			}
+			renderer.render(mainScene, mainCamera);
+		});
 
-			camera.position.applyAxisAngle(yHat, cameraRotationSpeed);
-			camera.lookAt(scene.position);
+		const envMapPromise = loopPromise.then(() => {
+			const environment = new RoomEnvironment();
+			const pmremGenerator = new PMREMGenerator(renderer);
+			const envMap = pmremGenerator.fromScene(environment).texture;
 
-			let angle = camera.position.angleTo(sprite.position);
+			environment.dispose();
+			pmremGenerator.dispose();
 
-			// determine if the larger angle should be used
-			const o =
-				camera.position.x * sprite.position.z -
-				camera.position.z * sprite.position.x;
-			if (o < 0) angle = tau - angle;
+			return envMap;
+		});
 
-			const offset = Math.floor(frameCount * (angle / tau));
+		const renderTargetPromise = Promise.all([
+			envMapPromise,
+			abalonePromise,
+		]).then(([envMap, gltf]) => {
+			const scene = new Scene().add(gltf.scene);
+			scene.environment = envMap;
 
-			if (lastOffset !== offset) {
-				canvasTexture.offset.x = offset / frameCount;
-				lastOffset = offset;
-			}
+			const box = new Box3().setFromObject(gltf.scene);
 
+			const boxSize = box.getSize(new Vector3());
+			const size = 1.1 * Math.max(...boxSize);
+
+			const fov = 60;
+
+			const m = 100;
+			const near = (1 / m) * size;
+			const far = m * size;
+
+			const distance = (0.5 * size) / Math.tan(DEG2RAD * 0.5 * fov);
+			const camera = new PerspectiveCamera(fov, 1, near, far).translateZ(
+				distance,
+			);
+
+			const rtSize = 256;
+			const target = new RenderTarget(rtSize, rtSize);
+
+			const lastRenderTarget = renderer.getRenderTarget();
+			renderer.setRenderTarget(target);
 			renderer.render(scene, camera);
+			renderer.setRenderTarget(lastRenderTarget);
+
+			return target;
+		});
+
+		const scenePromise = renderTargetPromise.then((target) => {
+			const material = new SpriteMaterial({
+				map: target.texture,
+			});
+			const sprite = new Sprite(material);
+			mainScene.add(sprite);
+			return () => {
+				mainScene.remove(sprite);
+				material.dispose();
+				target.dispose();
+			};
 		});
 
 		return () => {
-			promise.then(() => {
+			loopPromise.then(() => {
 				renderer.dispose();
+			});
+
+			scenePromise.then((cleanup) => {
+				cleanup();
 			});
 		};
 	}}
