@@ -57,7 +57,6 @@
 		RenderTarget,
 		SRGBColorSpace,
 		Scene,
-		Texture,
 		Vector2,
 		Vector3,
 		VideoTexture,
@@ -122,15 +121,7 @@
 	plane.position.copy(orbit.target);
 	scene.add(plane);
 
-	const geometry = createDisposed(BoxGeometry);
-
-	const dummyTexture = createDisposed(Texture);
-	const material = createDisposed(MeshBasicMaterial, {
-		map: dummyTexture,
-	});
-
-	const mesh = new Mesh(geometry, material);
-	const renderTargetScene = new Scene().add(mesh);
+	const renderTargetScene = new Scene();
 
 	const renderTargetCamera = new PerspectiveCamera().translateOnAxis(
 		axis.set(0, -1 * 0.5, 1).normalize(),
@@ -147,13 +138,20 @@
 		videoTexture.colorSpace = SRGBColorSpace;
 
 		const videoSrcSet = streamPromise.then((stream) => {
-			const lastMap = material.map;
-			material.map = videoTexture;
+			const geometry = new BoxGeometry();
+			const material = new MeshBasicMaterial({
+				map: videoTexture,
+			});
+			const mesh = new Mesh(geometry, material);
+			renderTargetScene.add(mesh);
 			const lastSrcObject = video.srcObject;
 			video.srcObject = stream;
 			video.play();
 			return () => {
-				material.map = lastMap;
+				renderTargetScene.remove(mesh);
+				geometry.dispose();
+				material.dispose();
+
 				video.pause();
 				video.srcObject = lastSrcObject;
 				videoTexture.dispose();
@@ -186,7 +184,7 @@
 					renderTarget.setSize(rendererSize.width, rendererSize.height);
 				}
 
-				mesh.rotateY((1 / 240) * Math.PI);
+				renderTargetScene.rotateY((1 / 240) * Math.PI);
 
 				const last = renderer.getRenderTarget();
 

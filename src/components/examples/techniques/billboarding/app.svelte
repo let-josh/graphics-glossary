@@ -29,7 +29,7 @@
 	const mainScene = new Scene();
 
 	const axis = new Vector3(1, 1, 1).normalize();
-	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 5);
+	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 1);
 	mainCamera.lookAt(mainScene.position);
 </script>
 
@@ -70,7 +70,7 @@
 			const box = new Box3().setFromObject(gltf.scene);
 
 			const boxSize = box.getSize(new Vector3());
-			const size = 1.1 * Math.max(...boxSize);
+			const size = 1.3 * Math.max(...boxSize);
 
 			const fov = 60;
 
@@ -84,7 +84,7 @@
 			);
 
 			const rtSize = 256;
-			const target = new RenderTarget(rtSize, rtSize);
+			const target = new RenderTarget(rtSize, rtSize, { flipY: false });
 
 			const lastRenderTarget = renderer.getRenderTarget();
 			renderer.setRenderTarget(target);
