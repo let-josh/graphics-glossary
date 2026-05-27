@@ -135,7 +135,9 @@
 
 			const renderPipeline = new RenderPipeline(renderer);
 			renderPipeline.outputNode = mix(
-				ascii(tex, charsTex, charsCount, { glyphSize }),
+				ascii(tex, charsTex, charsCount, {
+					glyphSize,
+				}),
 				texture(tex),
 				step(0.5, screenUV.x),
 			);

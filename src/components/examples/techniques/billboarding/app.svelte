@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts">
+	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
@@ -31,6 +32,11 @@
 	const axis = new Vector3(1, 1, 1).normalize();
 	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 1);
 	mainCamera.lookAt(mainScene.position);
+
+	const rtSize = 256;
+	const target = createDisposed(RenderTarget, rtSize, rtSize, {
+		flipY: false,
+	});
 </script>
 
 <canvas
@@ -83,18 +89,13 @@
 				distance,
 			);
 
-			const rtSize = 256;
-			const target = new RenderTarget(rtSize, rtSize, { flipY: false });
-
 			const lastRenderTarget = renderer.getRenderTarget();
 			renderer.setRenderTarget(target);
 			renderer.render(scene, camera);
 			renderer.setRenderTarget(lastRenderTarget);
-
-			return target;
 		});
 
-		const scenePromise = renderTargetPromise.then((target) => {
+		const scenePromise = renderTargetPromise.then(() => {
 			const material = new SpriteMaterial({
 				map: target.texture,
 			});
@@ -103,7 +104,6 @@
 			return () => {
 				mainScene.remove(sprite);
 				material.dispose();
-				target.dispose();
 			};
 		});
 

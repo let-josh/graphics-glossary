@@ -174,9 +174,10 @@
 				renderPipeline.render();
 			});
 
-			const pmremGenerator = new PMREMGenerator(renderer);
-			const pmremPromise = promise.then(() => {
+			const envMapPromise = promise.then(() => {
+				const pmremGenerator = new PMREMGenerator(renderer);
 				const envMap = pmremGenerator.fromScene(environment).texture;
+				pmremGenerator.dispose();
 				const lastEnvironment = scene.environment;
 				scene.environment = envMap;
 				return () => {
@@ -186,9 +187,8 @@
 
 			return () => {
 				renderPipeline.dispose();
-				pmremPromise.then((cleanup) => {
+				envMapPromise.then((cleanup) => {
 					cleanup();
-					pmremGenerator.dispose();
 				});
 				promise.then(() => {
 					renderer.dispose();
