@@ -51,8 +51,6 @@
 		scene.add(gltf.scene);
 	});
 
-	const environment = createDisposed(RoomEnvironment);
-
 	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;
 	orbit.autoRotateSpeed = 1;
@@ -176,8 +174,10 @@
 
 			const envMapPromise = promise.then(() => {
 				const pmremGenerator = new PMREMGenerator(renderer);
+				const environment = new RoomEnvironment();
 				const envMap = pmremGenerator.fromScene(environment).texture;
 				pmremGenerator.dispose();
+				environment.dispose();
 				const lastEnvironment = scene.environment;
 				scene.environment = envMap;
 				return () => {

@@ -22,6 +22,7 @@
 	] as const;
 
 	const gltfLoader = new GLTFLoader();
+	setDRACOLoader(gltfLoader);
 
 	const screenMeshName = "Mesh_televisionModern_1";
 
@@ -45,6 +46,7 @@
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
+	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
 	import {

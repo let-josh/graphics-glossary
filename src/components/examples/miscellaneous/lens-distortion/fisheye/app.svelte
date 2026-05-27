@@ -2,11 +2,8 @@
 	lang="ts"
 	module
 >
-	const dracoLoader = new DRACOLoader().setDecoderPath(
-		"https://www.gstatic.com/draco/v1/decoders/",
-	);
 	const gltfLoader = new GLTFLoader();
-	gltfLoader.setDRACOLoader(dracoLoader);
+	setDRACOLoader(gltfLoader);
 
 	const RESOLUTION = 1 << 9;
 
@@ -24,9 +21,9 @@
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraPlanes } from "@functions/setCameraPlanes";
+	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 	import {
 		CubeCamera,
