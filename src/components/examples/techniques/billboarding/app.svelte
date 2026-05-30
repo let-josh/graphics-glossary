@@ -19,7 +19,6 @@
 	} from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import {
-		ArrayCamera,
 		Box3,
 		BoxGeometry,
 		Mesh,
@@ -32,7 +31,6 @@
 		Sprite,
 		SpriteMaterial,
 		Vector3,
-		Vector4,
 		WebGPURenderer,
 	} from "three/webgpu";
 
