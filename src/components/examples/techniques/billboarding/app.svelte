@@ -6,15 +6,25 @@
 </script>
 
 <script lang="ts">
-	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { controls } from "@attachments/controls";
+
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
-	import { GLTFLoader, RoomEnvironment } from "three/examples/jsm/Addons.js";
+	import {
+		GLTFLoader,
+		OrbitControls,
+		RoomEnvironment,
+	} from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import {
+		ArrayCamera,
 		Box3,
+		BoxGeometry,
+		Mesh,
+		MeshNormalMaterial,
+		NearestFilter,
 		PMREMGenerator,
 		PerspectiveCamera,
 		RenderTarget,
@@ -22,25 +32,49 @@
 		Sprite,
 		SpriteMaterial,
 		Vector3,
+		Vector4,
 		WebGPURenderer,
 	} from "three/webgpu";
 
 	const abalonePromise = loadAbalone(gltfLoader);
 
-	const mainScene = new Scene();
+	const geometry = new BoxGeometry();
+	const material = new MeshNormalMaterial();
 
-	const axis = new Vector3(1, 1, 1).normalize();
-	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 1);
+	const box = new Mesh(geometry, material).translateX(1);
+	box.scale.setScalar(0.5);
+
+	const rtSize = 128;
+	const count = 16;
+	const target = new RenderTarget(count * rtSize, rtSize, {
+		magFilter: NearestFilter,
+		minFilter: NearestFilter,
+	});
+
+	const spriteMaterial = new SpriteMaterial({ map: target.texture });
+	const sprite = new Sprite(spriteMaterial).translateX(-1);
+
+	const mainScene = new Scene().add(box, sprite);
+
+	const axis = new Vector3(0, 0.5, 1).normalize();
+	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 3);
 	mainCamera.lookAt(mainScene.position);
 
-	const rtSize = 256;
-	const target = createDisposed(RenderTarget, rtSize, rtSize, {
-		flipY: false,
+	$effect(() => {
+		return () => {
+			geometry.dispose();
+			material.dispose();
+			target.dispose();
+		};
 	});
+
+	const orbit = new OrbitControls(mainCamera);
+	orbit.autoRotate = true;
 </script>
 
 <canvas
 	class="aspect-square md:aspect-video"
+	{@attach controls(orbit)}
 	{@attach (canvas) => {
 		const renderer = new WebGPURenderer({
 			antialias: true,
@@ -52,6 +86,7 @@
 				const aspect = canvas.clientWidth / canvas.clientHeight;
 				setCameraAspect(mainCamera, aspect);
 			}
+			orbit.update();
 			renderer.render(mainScene, mainCamera);
 		});
 
@@ -66,13 +101,7 @@
 			return envMap;
 		});
 
-		const renderTargetPromise = Promise.all([
-			envMapPromise,
-			abalonePromise,
-		]).then(([envMap, gltf]) => {
-			const scene = new Scene().add(gltf.scene);
-			scene.environment = envMap;
-
+		Promise.all([envMapPromise, abalonePromise]).then(([envMap, gltf]) => {
 			const box = new Box3().setFromObject(gltf.scene);
 
 			const boxSize = box.getSize(new Vector3());
@@ -85,35 +114,24 @@
 			const far = m * size;
 
 			const distance = (0.5 * size) / Math.tan(DEG2RAD * 0.5 * fov);
+
 			const camera = new PerspectiveCamera(fov, 1, near, far).translateZ(
 				distance,
 			);
 
-			const lastRenderTarget = renderer.getRenderTarget();
+			const lastTarget = renderer.getRenderTarget();
+
 			renderer.setRenderTarget(target);
+
+			const scene = new Scene().add(gltf.scene);
+			scene.environment = envMap;
 			renderer.render(scene, camera);
-			renderer.setRenderTarget(lastRenderTarget);
-		});
 
-		const scenePromise = renderTargetPromise.then(() => {
-			const material = new SpriteMaterial({
-				map: target.texture,
-			});
-			const sprite = new Sprite(material);
-			mainScene.add(sprite);
-			return () => {
-				mainScene.remove(sprite);
-				material.dispose();
-			};
+			renderer.setRenderTarget(lastTarget);
 		});
-
 		return () => {
 			loopPromise.then(() => {
 				renderer.dispose();
-			});
-
-			scenePromise.then((cleanup) => {
-				cleanup();
 			});
 		};
 	}}
