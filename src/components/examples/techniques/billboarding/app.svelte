@@ -19,6 +19,7 @@
 	} from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import {
+		ArrayCamera,
 		Box3,
 		BoxGeometry,
 		Mesh,
@@ -31,6 +32,7 @@
 		Sprite,
 		SpriteMaterial,
 		Vector3,
+		Vector4,
 		WebGPURenderer,
 	} from "three/webgpu";
 
@@ -42,14 +44,18 @@
 	const box = new Mesh(geometry, material).translateX(1);
 	box.scale.setScalar(0.5);
 
-	const rtSize = 128;
+	const rtSize = 512;
 	const count = 16;
 	const target = new RenderTarget(count * rtSize, rtSize, {
 		magFilter: NearestFilter,
 		minFilter: NearestFilter,
 	});
 
-	const spriteMaterial = new SpriteMaterial({ map: target.texture });
+	target.texture.repeat.x = 1 / count;
+
+	const spriteMaterial = new SpriteMaterial({
+		map: target.texture,
+	});
 	const sprite = new Sprite(spriteMaterial).translateX(-1);
 
 	const mainScene = new Scene().add(box, sprite);
@@ -68,6 +74,21 @@
 
 	const orbit = new OrbitControls(mainCamera);
 	orbit.autoRotate = true;
+
+	let lastAngle: number;
+	orbit.addEventListener("change", () => {
+		let angle =
+			Math.atan2(mainCamera.position.z, mainCamera.position.x) - 0.5 * Math.PI;
+		if (angle < 0) angle += 2 * Math.PI;
+		angle /= 2 * Math.PI;
+		angle *= count;
+		angle = Math.floor(angle);
+
+		if (lastAngle !== angle) {
+			lastAngle = angle;
+			target.texture.offset.x = (1 - angle / count) % 1;
+		}
+	});
 </script>
 
 <canvas
@@ -103,7 +124,7 @@
 			const box = new Box3().setFromObject(gltf.scene);
 
 			const boxSize = box.getSize(new Vector3());
-			const size = 1.3 * Math.max(...boxSize);
+			const size = 1.25 * Math.max(...boxSize);
 
 			const fov = 60;
 
@@ -113,16 +134,33 @@
 
 			const distance = (0.5 * size) / Math.tan(DEG2RAD * 0.5 * fov);
 
-			const camera = new PerspectiveCamera(fov, 1, near, far).translateZ(
-				distance,
-			);
+			const cameras: PerspectiveCamera[] = [];
+			const a = (2 * Math.PI) / count;
+			const yHat = new Vector3(0, 1, 0);
+			for (let i = 0; i < count; i += 1) {
+				const camera = new PerspectiveCamera(fov, 1, near, far).translateZ(
+					distance,
+				);
+				const angle = a * i;
+				camera.viewport = new Vector4(i * rtSize, 0, rtSize, rtSize);
+				camera.updateProjectionMatrix();
+
+				camera.position.applyAxisAngle(yHat, angle);
+				camera.lookAt(gltf.scene.position);
+				camera.updateMatrixWorld();
+
+				cameras.push(camera);
+			}
+
+			const camera = new ArrayCamera(cameras);
 
 			const lastTarget = renderer.getRenderTarget();
 
-			renderer.setRenderTarget(target);
-
 			const scene = new Scene().add(gltf.scene);
 			scene.environment = envMap;
+
+			renderer.setRenderTarget(target);
+
 			renderer.render(scene, camera);
 
 			renderer.setRenderTarget(lastTarget);
