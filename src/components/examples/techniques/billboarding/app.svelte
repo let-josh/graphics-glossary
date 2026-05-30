@@ -2,41 +2,34 @@
 	lang="ts"
 	module
 >
-	const gltfLoader = new GLTFLoader();
+	const countRegex = /(?<count>\d+).\w+/;
+	const textureLoader = new TextureLoader();
 </script>
 
 <script lang="ts">
+	import abaloneSpriteSheetUrl from "@assets/abalone-spritesheet-16.png";
+
 	import { controls } from "@attachments/controls";
 
-	import { loadAbalone } from "@functions/loadAbalone";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import { OrbitControls } from "three/examples/jsm/Addons.js";
+	import { texture, uniform, uv, vec2 } from "three/tsl";
 	import {
-		GLTFLoader,
-		OrbitControls,
-		RoomEnvironment,
-	} from "three/examples/jsm/Addons.js";
-	import { DEG2RAD } from "three/src/math/MathUtils.js";
-	import {
-		ArrayCamera,
-		Box3,
 		BoxGeometry,
 		Mesh,
 		MeshNormalMaterial,
-		NearestFilter,
-		PMREMGenerator,
 		PerspectiveCamera,
-		RenderTarget,
 		Scene,
 		Sprite,
-		SpriteMaterial,
+		SpriteNodeMaterial,
+		TextureLoader,
 		Vector3,
-		Vector4,
 		WebGPURenderer,
 	} from "three/webgpu";
 
-	const abalonePromise = loadAbalone(gltfLoader);
+	const loadSpriteSheet = textureLoader.loadAsync(abaloneSpriteSheetUrl.src);
 
 	const geometry = new BoxGeometry();
 	const material = new MeshNormalMaterial();
@@ -44,21 +37,14 @@
 	const box = new Mesh(geometry, material).translateX(1);
 	box.scale.setScalar(0.5);
 
-	const rtSize = 512;
-	const count = 16;
-	const target = new RenderTarget(count * rtSize, rtSize, {
-		magFilter: NearestFilter,
-		minFilter: NearestFilter,
-	});
+	const matches = abaloneSpriteSheetUrl.src.match(countRegex);
 
-	target.texture.repeat.x = 1 / count;
+	const count = +(matches?.groups?.count ?? 1);
 
-	const spriteMaterial = new SpriteMaterial({
-		map: target.texture,
-	});
-	const sprite = new Sprite(spriteMaterial).translateX(-1);
+	const offset = uniform(0);
+	const w = 1 / count;
 
-	const mainScene = new Scene().add(box, sprite);
+	const mainScene = new Scene().add(box);
 
 	const axis = new Vector3(0, 0.5, 1).normalize();
 	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 3);
@@ -68,26 +54,22 @@
 		return () => {
 			geometry.dispose();
 			material.dispose();
-			target.dispose();
 		};
 	});
 
 	const orbit = new OrbitControls(mainCamera);
 	orbit.autoRotate = true;
 
-	let lastAngle: number;
 	orbit.addEventListener("change", () => {
 		let angle =
 			Math.atan2(mainCamera.position.z, mainCamera.position.x) - 0.5 * Math.PI;
 		if (angle < 0) angle += 2 * Math.PI;
+
 		angle /= 2 * Math.PI;
 		angle *= count;
-		angle = Math.floor(angle);
+		angle = count - Math.floor(angle) - 1;
 
-		if (lastAngle !== angle) {
-			lastAngle = angle;
-			target.texture.offset.x = (1 - angle / count) % 1;
-		}
+		offset.value = angle;
 	});
 </script>
 
@@ -100,7 +82,25 @@
 			canvas,
 		});
 
-		const loopPromise = renderer.setAnimationLoop(() => {
+		const addSprite = loadSpriteSheet.then((t) => {
+			t.colorSpace = renderer.currentColorSpace;
+			const spriteMaterial = new SpriteNodeMaterial({
+				colorNode: texture(
+					t,
+					uv()
+						.mul(vec2(w, 1))
+						.add(vec2(offset.mul(w), 0)),
+				),
+			});
+			const sprite = new Sprite(spriteMaterial).translateX(-1);
+			mainScene.add(sprite);
+			return () => {
+				mainScene.remove(sprite);
+				spriteMaterial.dispose();
+			};
+		});
+
+		const beginLoop = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
 				const aspect = canvas.clientWidth / canvas.clientHeight;
 				setCameraAspect(mainCamera, aspect);
@@ -109,64 +109,11 @@
 			renderer.render(mainScene, mainCamera);
 		});
 
-		const envMapPromise = loopPromise.then(() => {
-			const environment = new RoomEnvironment();
-			const pmremGenerator = new PMREMGenerator(renderer);
-			const envMap = pmremGenerator.fromScene(environment).texture;
-
-			environment.dispose();
-			pmremGenerator.dispose();
-
-			return envMap;
-		});
-
-		Promise.all([envMapPromise, abalonePromise]).then(([envMap, gltf]) => {
-			const box = new Box3().setFromObject(gltf.scene);
-
-			const boxSize = box.getSize(new Vector3());
-			const size = 1.25 * Math.max(...boxSize);
-
-			const fov = 60;
-
-			const m = 100;
-			const near = (1 / m) * size;
-			const far = m * size;
-
-			const distance = (0.5 * size) / Math.tan(DEG2RAD * 0.5 * fov);
-
-			const cameras: PerspectiveCamera[] = [];
-			const a = (2 * Math.PI) / count;
-			const yHat = new Vector3(0, 1, 0);
-			for (let i = 0; i < count; i += 1) {
-				const camera = new PerspectiveCamera(fov, 1, near, far).translateZ(
-					distance,
-				);
-				const angle = a * i;
-				camera.viewport = new Vector4(i * rtSize, 0, rtSize, rtSize);
-				camera.updateProjectionMatrix();
-
-				camera.position.applyAxisAngle(yHat, angle);
-				camera.lookAt(gltf.scene.position);
-				camera.updateMatrixWorld();
-
-				cameras.push(camera);
-			}
-
-			const camera = new ArrayCamera(cameras);
-
-			const lastTarget = renderer.getRenderTarget();
-
-			const scene = new Scene().add(gltf.scene);
-			scene.environment = envMap;
-
-			renderer.setRenderTarget(target);
-
-			renderer.render(scene, camera);
-
-			renderer.setRenderTarget(lastTarget);
-		});
 		return () => {
-			loopPromise.then(() => {
+			addSprite.then((cleanup) => {
+				cleanup();
+			});
+			beginLoop.then(() => {
 				renderer.dispose();
 			});
 		};
