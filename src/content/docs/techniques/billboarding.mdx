@@ -7,23 +7,33 @@ title: Billboarding
 
 import App from "@components/examples/techniques/billboarding/app.svelte";
 
-A sprite is a 2D flat plane that always faces the camera. By swapping out the texture, the illusion of a 3D model can be achieved while keeping the geometry extremely simple. This strategy was very common in the early days of 3D video game development.
+A sprite is a 2D flat plane that always faces the camera. By swapping out the
+texture, the illusion of a 3D model can be achieved while keeping the geometry
+extremely simple. This strategy was very common in the early days of 3D video
+game development.
 
 ## Mario Kart 64
 
 ![a screenshot of the banshee boardwalk course from mario kart 64](@assets/banshee-boardwalk.png)
 
-Mario Kart 64 makes heavy use of the billboarding technique. All of the racers in the game are actually 2D sprites whose texture is dependent on the way the racer is being steered. This was probably a necessary simplification considering the development team's lack of experience with 3D game development and the desire for the game to support up to 4 players.
+Mario Kart 64 makes heavy use of the billboarding technique. All of the racers
+in the game are actually 2D sprites whose texture is dependent on the way the
+racer is being steered. This was probably a necessary simplification
+considering the development team's lack of experience with 3D game development
+and the desire for the game to support up to 4 players.
 
 ### Boo
 
-The racers weren't the only sprites in the game. Many background elements such as trees and enemies are also sprites. Some of these entities only have "front-facing" spritesheets, however the spritesheet for the boos in _Banshee Boardwalk_ give a "360-view" of the entity.
-
-With this, we can choose which texture to apply to the sprite based on the position of the camera.
+The racers aren't the only sprites in the game. Many background elements such
+as trees and enemies are also sprites. Some of these entities only have
+"front-facing" spritesheets, however the spritesheet for the boos in _Banshee
+Boardwalk_ give a "360-view" of the entity.
 
 <App client:only="svelte" />
 
-As the camera moves around the sprite, we see different angles of the boo. It gives the semblance of a 3D model but in reality, a 2D plane is being used and the corresponding texture is being applied.
+As the camera moves around the sprite, we see different angles of the sprite
+"scene". It gives the semblance of a 3D model but in reality, a 2D plane is
+being used and the texture is sampled in such a way to show the correct sprite.
 
 ## Resources
 
