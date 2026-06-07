@@ -7,7 +7,6 @@
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { loadAbalone } from "@functions/loadAbalone";
 
 	const gltfLoader = new GLTFLoader();
@@ -16,6 +15,7 @@
 <script lang="ts">
 	import { halftone } from "./tsl";
 
+	import { fitCameraToObject } from "@functions/fitCameraToObject";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
@@ -24,7 +24,16 @@
 		OrbitControls,
 		RoomEnvironment,
 	} from "three/examples/jsm/Addons.js";
-	import { PI, mix, pass, screenUV, step, texture, uniform } from "three/tsl";
+	import {
+		PI,
+		mix,
+		pass,
+		pmremTexture,
+		screenUV,
+		step,
+		texture,
+		uniform,
+	} from "three/tsl";
 	import {
 		Color,
 		PMREMGenerator,
@@ -42,12 +51,13 @@
 	const backgroundColor = new Color(background.value);
 	scene.background = backgroundColor;
 
-	const camera = new PerspectiveCamera().translateZ(0.25);
+	const camera = new PerspectiveCamera();
 
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
 	loadAbalone(gltfLoader).then((gltf) => {
+		fitCameraToObject(camera, gltf.scene);
 		scene.add(gltf.scene);
 	});
 
@@ -161,7 +171,7 @@
 				step(0.5, screenUV.x),
 			);
 
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
@@ -172,14 +182,16 @@
 				renderPipeline.render();
 			});
 
-			const envMapPromise = promise.then(() => {
+			const envMapPromise = setAnimationLoop.then(() => {
 				const pmremGenerator = new PMREMGenerator(renderer);
 				const environment = new RoomEnvironment();
-				const envMap = pmremGenerator.fromScene(environment).texture;
+				const envMap = pmremTexture(
+					pmremGenerator.fromScene(environment).texture,
+				);
 				pmremGenerator.dispose();
 				environment.dispose();
 				const lastEnvironment = scene.environment;
-				scene.environment = envMap;
+				scene.environmentNode = envMap;
 				return () => {
 					scene.environment = lastEnvironment;
 				};
@@ -190,7 +202,7 @@
 				envMapPromise.then((cleanup) => {
 					cleanup();
 				});
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

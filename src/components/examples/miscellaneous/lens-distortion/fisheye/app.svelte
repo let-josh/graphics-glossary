@@ -82,7 +82,7 @@
 			canvas,
 		});
 
-		const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
+		const setAnimationLoop = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
 				renderer.getSize(rendererSize).multiplyScalar(0.5);
 				setCameraPlanes(orthoCamera, rendererSize.width, rendererSize.height);
@@ -99,7 +99,7 @@
 		});
 
 		return () => {
-			setAnimationLoopPromise.then(() => {
+			setAnimationLoop.then(() => {
 				renderer.dispose();
 			});
 		};

@@ -134,7 +134,7 @@
 				canvas,
 			});
 
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
@@ -161,7 +161,7 @@
 			});
 
 			return () => {
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

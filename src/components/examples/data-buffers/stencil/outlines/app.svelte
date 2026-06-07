@@ -134,7 +134,7 @@
 				stencil: true,
 			});
 
-			const promise = renderer.setAnimationLoop((time) => {
+			const setAnimationLoop = renderer.setAnimationLoop((time) => {
 				const dt = time - lastTime;
 				group.rotateY(dt / 1000);
 
@@ -157,7 +157,7 @@
 			});
 
 			return () => {
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

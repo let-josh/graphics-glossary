@@ -9,7 +9,7 @@
 	const POWER_DIFF = POWER_MAX - POWER_MIN;
 	const POWER_DEFAULT = 0.5 * POWER_DIFF;
 
-	const f = normalWorld.dot(positionViewDirection).abs().setName("factor");
+	const f = normalWorld.dot(positionWorldDirection).abs().setName("factor");
 </script>
 
 <script lang="ts">
@@ -19,11 +19,18 @@
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { fitCameraToObject } from "@functions/fitCameraToObject";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import { normalWorld, positionViewDirection, uniform } from "three/tsl";
+	import {
+		normalView,
+		normalWorld,
+		positionViewDirection,
+		positionWorldDirection,
+		uniform,
+	} from "three/tsl";
 	import {
 		Color,
 		Mesh,
@@ -43,14 +50,18 @@
 		.pow(powerUniform)
 		.mul(fresnelColorUniform);
 
-	const material = createDisposed(MeshBasicNodeMaterial);
-	material.colorNode = fresnel.add(inverseFresnel);
+	const material = createDisposed(MeshBasicNodeMaterial, {
+		colorNode: fresnel.add(inverseFresnel),
+	});
 
 	const geometry = createDisposed(TorusKnotGeometry);
 
 	const mesh = new Mesh(geometry, material);
 
-	const camera = new PerspectiveCamera().translateZ(5);
+	const camera = new PerspectiveCamera();
+	fitCameraToObject(camera, mesh, {
+		fudge: 1.1,
+	});
 
 	const colors = {
 		base: `#${baseColorUniform.value.getHexString()}`,
@@ -103,7 +114,7 @@
 				canvas,
 			});
 
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
@@ -114,7 +125,7 @@
 			});
 
 			return () => {
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

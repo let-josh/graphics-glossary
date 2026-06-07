@@ -147,7 +147,7 @@
 				texture(tex),
 				step(0.5, screenUV.x),
 			);
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
@@ -159,7 +159,7 @@
 
 			return () => {
 				renderPipeline.dispose();
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

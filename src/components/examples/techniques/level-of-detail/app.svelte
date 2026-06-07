@@ -16,7 +16,6 @@
 </script>
 
 <script lang="ts">
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
@@ -36,12 +35,12 @@
 
 	const geometries: BufferGeometry[] = [];
 
-	const material = createDisposed(MeshNormalMaterial, {
+	const material = new MeshNormalMaterial({
 		flatShading: true,
 	});
 
 	for (let i = 0, l = distances.length; i < l; i += 1) {
-		const geometry = createDisposed(IcosahedronGeometry, radius, i);
+		const geometry = new IcosahedronGeometry(radius, i);
 
 		geometries.push(geometry);
 		const object = new Mesh(geometry, material);
@@ -53,6 +52,8 @@
 
 	onCleanup(() => {
 		for (const distance of distances) lod.removeLevel(distance);
+		for (const geometry of geometries) geometry.dispose();
+		material.dispose();
 	});
 
 	const cameraPositionZEnd = 2 + lod.position.z + radius;
@@ -68,7 +69,7 @@
 			canvas,
 		});
 
-		const promise = renderer.setAnimationLoop((time) => {
+		const setAnimationLoop = renderer.setAnimationLoop((time) => {
 			if (resize(renderer)) {
 				const aspect = canvas.clientWidth / canvas.clientHeight;
 				setCameraAspect(camera, aspect);
@@ -80,7 +81,7 @@
 		});
 
 		return () => {
-			promise.then(() => {
+			setAnimationLoop.then(() => {
 				renderer.dispose();
 			});
 		};

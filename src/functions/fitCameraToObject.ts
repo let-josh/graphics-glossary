@@ -5,13 +5,13 @@ import type { Object3D, PerspectiveCamera } from "three/webgpu";
 export const fitCameraToObject = (
 	camera: PerspectiveCamera,
 	object: Object3D,
-	{ box = new Box3(), size = new Vector3() } = {},
+	{ box = new Box3(), size = new Vector3(), fudge = 1 } = {},
 ) => {
 	box.setFromObject(object);
 	box.getCenter(camera.position);
 
 	box.getSize(size);
 	const max = Math.max(...size);
-	const distance = (0.5 * max) / Math.tan(DEG2RAD * 0.5 * camera.fov);
+	const distance = (0.5 * max * fudge) / Math.tan(DEG2RAD * 0.5 * camera.fov);
 	camera.translateZ(distance);
 };

@@ -11,6 +11,7 @@
 
 	import { controls } from "@attachments/controls";
 
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
@@ -50,13 +51,6 @@
 	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 3);
 	mainCamera.lookAt(mainScene.position);
 
-	$effect(() => {
-		return () => {
-			geometry.dispose();
-			material.dispose();
-		};
-	});
-
 	const orbit = new OrbitControls(mainCamera);
 	orbit.autoRotate = true;
 
@@ -71,6 +65,37 @@
 
 		offset.value = angle;
 	});
+
+	const createSpriteMaterial = loadSpriteSheet.then(
+		(t) =>
+			new SpriteNodeMaterial({
+				colorNode: texture(
+					t,
+					uv()
+						.mul(vec2(w, 1))
+						.add(vec2(offset.mul(w), 0)),
+				),
+			}),
+	);
+
+	const createSprite = createSpriteMaterial.then(
+		(material) => new Sprite(material),
+	);
+
+	const addSpriteToScene = createSprite.then((sprite) => {
+		mainScene.add(sprite);
+		return () => {
+			mainScene.remove(sprite);
+		};
+	});
+
+	onCleanup(() => {
+		addSpriteToScene.then((removeSprite) => {
+			removeSprite();
+		});
+		geometry.dispose();
+		material.dispose();
+	});
 </script>
 
 <canvas
@@ -82,25 +107,11 @@
 			canvas,
 		});
 
-		const addSprite = loadSpriteSheet.then((t) => {
+		loadSpriteSheet.then((t) => {
 			t.colorSpace = renderer.currentColorSpace;
-			const spriteMaterial = new SpriteNodeMaterial({
-				colorNode: texture(
-					t,
-					uv()
-						.mul(vec2(w, 1))
-						.add(vec2(offset.mul(w), 0)),
-				),
-			});
-			const sprite = new Sprite(spriteMaterial).translateX(-1);
-			mainScene.add(sprite);
-			return () => {
-				mainScene.remove(sprite);
-				spriteMaterial.dispose();
-			};
 		});
 
-		const beginLoop = renderer.setAnimationLoop(() => {
+		const setAnimationLoop = renderer.setAnimationLoop(() => {
 			if (resize(renderer)) {
 				const aspect = canvas.clientWidth / canvas.clientHeight;
 				setCameraAspect(mainCamera, aspect);
@@ -110,10 +121,7 @@
 		});
 
 		return () => {
-			addSprite.then((cleanup) => {
-				cleanup();
-			});
-			beginLoop.then(() => {
+			setAnimationLoop.then(() => {
 				renderer.dispose();
 			});
 		};

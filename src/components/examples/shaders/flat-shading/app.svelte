@@ -9,10 +9,7 @@
 	).normalize();
 	const directionalLightTranslationAmount = 3;
 
-	const cameraTranslationAxis = new Vector3(0, 0, 1);
 	const cameraTranslationAmount = 5;
-
-	const SHININESS_MAX = 300;
 </script>
 
 <script lang="ts">
@@ -22,6 +19,7 @@
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { fitCameraToObject } from "@functions/fitCameraToObject";
 	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
@@ -31,7 +29,7 @@
 		DirectionalLight,
 		DirectionalLightHelper,
 		Mesh,
-		MeshPhongMaterial,
+		MeshLambertMaterial,
 		PerspectiveCamera,
 		Scene,
 		SphereGeometry,
@@ -41,10 +39,16 @@
 
 	const geometry = createDisposed(SphereGeometry);
 
-	const material = createDisposed(MeshPhongMaterial, {
+	const material = createDisposed(MeshLambertMaterial, {
 		color: "#770077",
-		shininess: 0.5 * SHININESS_MAX,
 	});
+
+	const mesh = new Mesh(geometry, material);
+	mesh.visible = false;
+	const flatShadingMaterial = material.clone();
+	flatShadingMaterial.flatShading = true;
+
+	const flatShadingMesh = new Mesh(geometry, flatShadingMaterial);
 
 	const ambientLight = createDisposed(AmbientLight);
 	const directionalLight = createDisposed(DirectionalLight).translateOnAxis(
@@ -53,13 +57,6 @@
 	);
 
 	const helper = createDisposed(DirectionalLightHelper, directionalLight);
-
-	const mesh = new Mesh(geometry, material);
-	mesh.visible = false;
-	const flatShadingMaterial = createDisposed(MeshPhongMaterial).copy(material);
-	flatShadingMaterial.flatShading = true;
-
-	const flatShadingMesh = new Mesh(geometry, flatShadingMaterial);
 
 	const scene = new Scene().add(
 		mesh,
@@ -73,13 +70,12 @@
 
 	helper.update();
 
-	const camera = new PerspectiveCamera().translateOnAxis(
-		cameraTranslationAxis,
-		cameraTranslationAmount,
-	);
+	const camera = new PerspectiveCamera();
+	fitCameraToObject(camera, mesh, {
+		fudge: 1.2,
+	});
 
 	const orbit = new OrbitControls(camera);
-	orbit.autoRotate = true;
 </script>
 
 <div class="relative">
@@ -93,16 +89,6 @@
 				const materialFolder = pane.addFolder({
 					title: "material",
 				});
-
-				materialFolder
-					.addBinding(material, "shininess", {
-						min: 0,
-						max: SHININESS_MAX,
-						step: 1,
-					})
-					.on("change", (e) => {
-						flatShadingMaterial.shininess = e.value;
-					});
 
 				materialFolder
 					.addBinding(
@@ -142,18 +128,17 @@
 				canvas,
 			});
 
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
 				}
 
-				orbit.update();
 				renderer.render(scene, camera);
 			});
 
 			return () => {
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};

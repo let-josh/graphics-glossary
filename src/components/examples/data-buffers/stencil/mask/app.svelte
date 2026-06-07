@@ -128,7 +128,7 @@
 			stencil: true,
 		});
 
-		const promise = renderer.setAnimationLoop(() => {
+		const setAnimationLoop = renderer.setAnimationLoop(() => {
 			knot.rotateY(KNOT_ROTATION_AMOUNT);
 			if (resize(renderer)) {
 				const aspect = canvas.clientWidth / canvas.clientHeight;
@@ -151,7 +151,7 @@
 		});
 
 		return () => {
-			promise.then(() => {
+			setAnimationLoop.then(() => {
 				renderer.dispose();
 			});
 		};

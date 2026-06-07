@@ -58,15 +58,20 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane({ title: "controls" }, (pane) => {
-			pane
-				.addBinding(material, "vertexColors", {
-					label: "vertex colors",
-				})
-				.on("change", () => {
-					material.needsUpdate = true;
-				});
-		})}
+		{@attach pane(
+			{
+				title: "controls",
+			},
+			(pane) => {
+				pane
+					.addBinding(material, "vertexColors", {
+						label: "vertex colors",
+					})
+					.on("change", () => {
+						material.needsUpdate = true;
+					});
+			},
+		)}
 	/>
 
 	<canvas
@@ -78,7 +83,7 @@
 				canvas,
 			});
 
-			const promise = renderer.setAnimationLoop(() => {
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				if (resize(renderer)) {
 					const aspect = canvas.clientWidth / canvas.clientHeight;
 					setCameraAspect(camera, aspect);
@@ -89,7 +94,7 @@
 			});
 
 			return () => {
-				promise.then(() => {
+				setAnimationLoop.then(() => {
 					renderer.dispose();
 				});
 			};
