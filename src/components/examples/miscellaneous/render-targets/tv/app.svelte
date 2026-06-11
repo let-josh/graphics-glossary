@@ -34,7 +34,7 @@
 	const CAMERA_TRANSLATION_AMOUNT = 1;
 </script>
 
-<script>
+<script lang="ts">
 	import { controls } from "@attachments/controls";
 
 	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";

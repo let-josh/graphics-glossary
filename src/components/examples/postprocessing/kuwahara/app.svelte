@@ -42,7 +42,18 @@
 
 	const scene = new t.Scene();
 
-	const setEnvironment = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+	const { promise: loadEnvironment, resolve: resolveEnvironment } =
+		Promise.withResolvers<t.DataTexture>();
+
+	$effect(() => {
+		hdrLoader.loadAsync(hdrUrl).then(resolveEnvironment);
+		loadAbalone(gltfLoader).then((gltf) => {
+			fitCameraToObject(camera, gltf.scene);
+			scene.add(gltf.scene);
+		});
+	});
+
+	const setEnvironment = loadEnvironment.then((hdr) => {
 		const lastBackground = scene.backgroundNode;
 		const lastEnvironment = scene.environmentNode;
 
@@ -59,11 +70,6 @@
 		setEnvironment.then((cleanup) => {
 			cleanup();
 		});
-	});
-
-	loadAbalone(gltfLoader).then((gltf) => {
-		fitCameraToObject(camera, gltf.scene);
-		scene.add(gltf.scene);
 	});
 
 	const camera = new t.PerspectiveCamera();

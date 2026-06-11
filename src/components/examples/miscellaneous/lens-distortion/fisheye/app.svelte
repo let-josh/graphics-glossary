@@ -29,8 +29,10 @@
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 	const scene = new t.Scene();
-	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
-		scene.add(gltf.scene);
+	$effect(() => {
+		gltfLoader.loadAsync(gltfUrl).then((gltf) => {
+			scene.add(gltf.scene);
+		});
 	});
 
 	const orthoCamera = new t.OrthographicCamera().translateZ(ZOOM);

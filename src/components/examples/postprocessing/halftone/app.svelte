@@ -50,9 +50,11 @@
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
-	loadAbalone(gltfLoader).then((gltf) => {
-		fitCameraToObject(camera, gltf.scene);
-		scene.add(gltf.scene);
+	$effect(() => {
+		loadAbalone(gltfLoader).then((gltf) => {
+			fitCameraToObject(camera, gltf.scene);
+			scene.add(gltf.scene);
+		});
 	});
 
 	const orbit = new OrbitControls(camera);
