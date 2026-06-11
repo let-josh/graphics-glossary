@@ -9,7 +9,7 @@ import App from "@components/examples/techniques/level-of-detail/app.svelte";
 
 Level of Detail or LOD is a performance-improving technique where the complexity of an object's geometry decreases when it is further from the camera. Objects that far away are less complex because finer details will probably not be visible to the camera.
 
-<App client:visible="svelte" />
+<App client:visible />
 
 The performance boost comes from the fact that lower-quality versions of the object take less time to render.
 

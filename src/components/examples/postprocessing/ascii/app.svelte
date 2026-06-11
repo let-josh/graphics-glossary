@@ -14,14 +14,17 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import {
 		GLTFLoader,
 		HDRLoader,
@@ -36,15 +39,6 @@
 		texture,
 		uniform,
 	} from "three/tsl";
-	import {
-		CanvasTexture,
-		EquirectangularReflectionMapping,
-		PerspectiveCamera,
-		RenderPipeline,
-		Scene,
-		Texture,
-		WebGPURenderer,
-	} from "three/webgpu";
 
 	// const chars = " %@";
 	const chars = " .:-=+*#%@";
@@ -53,27 +47,62 @@
 
 	const charSize = 32;
 
-	const scene = new Scene();
+	const scene = new t.Scene();
 
-	const camera = new PerspectiveCamera();
+	const camera = new t.PerspectiveCamera();
 	loadAbalone(gltfLoader).then((gltf) => {
 		fitCameraToObject(camera, gltf.scene);
 		scene.add(gltf.scene);
 	});
 
-	hdrLoader.loadAsync(hdrUrl).then((hdr) => {
-		hdr.mapping = EquirectangularReflectionMapping;
-		scene.environmentNode = scene.backgroundNode = pmremTexture(hdr);
+	const { promise: loadHDR, resolve: resolveHDR } =
+		Promise.withResolvers<t.Texture>();
+
+	$effect(() => {
+		hdrLoader.loadAsync(hdrUrl).then(resolveHDR);
+	});
+
+	const createPMREMNode = loadHDR.then((hdr) => pmremTexture(hdr));
+
+	const setBackground = createPMREMNode.then((environment) => {
+		const lastEnvironment = scene.environmentNode;
+		const lastBackground = scene.backgroundNode;
+		scene.environmentNode = scene.backgroundNode = environment;
+		return () => {
+			scene.environmentNode = lastEnvironment;
+			scene.backgroundNode = lastBackground;
+		};
+	});
+
+	onCleanup(() => {
+		setBackground.then((cleanup) => {
+			cleanup();
+		});
+		createPMREMNode.then((node) => {
+			node.dispose();
+		});
 	});
 
 	const orbit = new OrbitControls(camera);
 
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
+	const glyphSizes = {
+		"8": 8,
+		"16": 16,
+		"32": 32,
+	} as const;
+	const glyphSize = uniform(glyphSizes[16]);
 
-	const glyphSize = uniform(16);
+	const charsTex = texture();
 
-	const charsTex = texture(new Texture());
+	const canvasSize = new Size();
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
 
 	onCleanup(() => {
 		charsTex.dispose();
@@ -94,13 +123,13 @@
 		context.fillStyle = "white";
 		const y = 0.5 * charSize;
 		for (let i = 0; i < charsCount; i += 1) {
-			const char = chars[i];
+			const char = chars[i] ?? "";
 			const x = y + charSize * i;
 			context.fillText(char, x, y);
 		}
 
 		const last = charsTex.value;
-		const tex = new CanvasTexture(canvas);
+		const tex = new t.CanvasTexture(canvas);
 		tex.flipY = false;
 		tex.generateMipmaps = false;
 		charsTex.value = tex;
@@ -122,24 +151,25 @@
 			(pane) => {
 				pane.addBinding(glyphSize, "value", {
 					label: "glyph size",
-					options: {
-						"8": 8,
-						"16": 16,
-						"32": 32,
-					},
+					options: glyphSizes,
 				});
 			},
 		)}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				canvas,
 			});
 
-			const renderPipeline = new RenderPipeline(renderer);
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
+
+			const renderPipeline = new t.RenderPipeline(renderer);
 			renderPipeline.outputNode = mix(
 				ascii(tex, charsTex, charsCount, {
 					glyphSize,
@@ -147,11 +177,10 @@
 				texture(tex),
 				step(0.5, screenUV.x),
 			);
+
 			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
+				const aspect = canvas.clientWidth / canvas.clientHeight;
+				setCameraAspect(camera, aspect);
 
 				orbit.update();
 				renderPipeline.render();

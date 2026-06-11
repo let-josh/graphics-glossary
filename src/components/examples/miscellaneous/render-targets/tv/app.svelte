@@ -10,7 +10,7 @@
 	import posz from "@assets/cubemaps/Lycksele/posz.jpg";
 	import tvGltfUrl from "@assets/gltfs/kenney/tv.glb";
 
-	const cubeLoader = new CubeTextureLoader();
+	const cubeLoader = new t.CubeTextureLoader();
 
 	const cubeMapFiles = [
 		posx.src,
@@ -28,11 +28,7 @@
 
 	const CONSTRAINT_FACTOR = 1000;
 
-	const isMesh = (m: any): m is Mesh => m?.isMesh === true;
-
-	const rendererSize = new Vector2();
-
-	const size = new Vector3();
+	const isMesh = (m: any): m is t.Mesh => m?.isMesh === true;
 
 	const RENDER_TARGET_CAMERA_TRANSLATION_AMOUNT = 3;
 	const CAMERA_TRANSLATION_AMOUNT = 1;
@@ -41,110 +37,140 @@
 <script>
 	import { controls } from "@attachments/controls";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import { boxFromIndexedPositionAttribute } from "@functions/boxFromIndexedPositionAttribute";
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
+	import * as t from "three/webgpu";
 	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
-	import {
-		BoxGeometry,
-		CubeTextureLoader,
-		Mesh,
-		MeshBasicMaterial,
-		PerspectiveCamera,
-		PlaneGeometry,
-		RenderTarget,
-		SRGBColorSpace,
-		Scene,
-		Vector2,
-		Vector3,
-		VideoTexture,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const [tvGltf, environment] = await Promise.all([
-		gltfLoader.loadAsync(tvGltfUrl),
-		cubeLoader.loadAsync(cubeMapFiles),
-	]);
+	const { promise: loadGLTF, resolve: resolveGLTF } =
+		Promise.withResolvers<Awaited<ReturnType<GLTFLoader["loadAsync"]>>>();
+	const { promise: loadEnvironment, resolve: resolveEnvironment } =
+		Promise.withResolvers<t.CubeTexture>();
 
-	const screenMesh = tvGltf.scene.getObjectByName(screenMeshName);
-
-	if (!isMesh(screenMesh)) {
-		throw new Error("screen mesh is not an instance of `Mesh`");
-	}
-
-	const index = screenMesh.geometry.getIndex();
-	if (index === null) {
-		throw new Error("expected screen mesh geometry to be indexed");
-	}
-
-	screenMesh.visible = false;
-
-	onCleanup(() => {
-		environment.dispose();
+	$effect(() => {
+		gltfLoader.loadAsync(tvGltfUrl).then(resolveGLTF);
+		cubeLoader.loadAsync(cubeMapFiles).then(resolveEnvironment);
 	});
 
-	const scene = new Scene().add(tvGltf.scene);
-	scene.environment = scene.background = environment;
+	const getScreenMesh = loadGLTF.then((gltf) => {
+		const object = gltf.scene.getObjectByName(screenMeshName);
+		if (!isMesh(object)) return null;
+		object.visible = false;
+		return object;
+	});
 
-	const positionAttribute = screenMesh.geometry.getAttribute("position");
+	const scene = new t.Scene();
+	loadGLTF.then((gltf) => {
+		scene.add(gltf.scene);
+	});
 
-	const axis = new Vector3(0, 0.5, 1).normalize();
-	const camera = new PerspectiveCamera().translateOnAxis(
+	loadEnvironment.then((environment) => {
+		scene.environment = scene.background = environment;
+	});
+
+	const createBox = getScreenMesh.then((mesh) => {
+		if (mesh === null) return mesh;
+		const index = mesh.geometry.getIndex() ?? null;
+		if (index === null) return index;
+		const positionAttribute = mesh.geometry.getAttribute("position");
+		return boxFromIndexedPositionAttribute(index, positionAttribute);
+	});
+
+	const axis = new t.Vector3(0, 0.5, 1).normalize();
+	const camera = new t.PerspectiveCamera().translateOnAxis(
 		axis,
 		CAMERA_TRANSLATION_AMOUNT,
 	);
 	const orbit = new OrbitControls(camera);
 
-	const box = boxFromIndexedPositionAttribute(index, positionAttribute);
-	box.getCenter(orbit.target);
-	orbit.update();
-
-	box.getSize(size);
-
-	const streamPromise = navigator.mediaDevices.getUserMedia({
-		video: {
-			width: Math.floor(CONSTRAINT_FACTOR * size.x),
-			height: Math.floor(CONSTRAINT_FACTOR * size.y),
-			facingMode: "user",
-		},
+	const centerOrbitTarget = createBox.then((box) => {
+		box?.getCenter(orbit.target);
 	});
 
-	const screenGeometry = createDisposed(PlaneGeometry, size.x, size.y);
+	const createSize = createBox.then((box) => {
+		const size = new t.Vector3();
+		box?.getSize(size);
+		return size;
+	});
 
-	const renderTarget = createDisposed(RenderTarget);
-	const screenMaterial = createDisposed(MeshBasicMaterial, {
+	const createStream = createSize.then((size) =>
+		navigator.mediaDevices.getUserMedia({
+			video: {
+				width: Math.floor(CONSTRAINT_FACTOR * size.x),
+				height: Math.floor(CONSTRAINT_FACTOR * size.y),
+				facingMode: "user",
+			},
+		}),
+	);
+
+	const createScreenGeometry = createSize.then(
+		(size) => new t.PlaneGeometry(size?.x ?? 1, size?.y ?? 1),
+	);
+
+	const createScreenMesh = createScreenGeometry.then(
+		(geometry) => new t.Mesh(geometry, screenMaterial),
+	);
+
+	Promise.all([createScreenMesh, centerOrbitTarget]).then(([mesh]) => {
+		mesh.position.copy(orbit.target);
+	});
+
+	createScreenMesh.then((mesh) => {
+		scene.add(mesh);
+	});
+
+	const renderTarget = new t.RenderTarget();
+	const screenMaterial = new t.MeshBasicMaterial({
 		map: renderTarget.texture,
 	});
-	const plane = new Mesh(screenGeometry, screenMaterial);
-	plane.position.copy(orbit.target);
-	scene.add(plane);
 
-	const renderTargetScene = new Scene();
+	const renderTargetScene = new t.Scene();
 
-	const renderTargetCamera = new PerspectiveCamera().translateOnAxis(
+	const renderTargetCamera = new t.PerspectiveCamera().translateOnAxis(
 		axis.set(0, -1 * 0.5, 1).normalize(),
 		RENDER_TARGET_CAMERA_TRANSLATION_AMOUNT,
 	);
 	renderTargetCamera.lookAt(renderTargetScene.position);
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+	$effect(() => {
+		renderTarget.setSize(rendererSize.width, rendererSize.height);
+	});
+
+	onCleanup(() => {
+		renderTarget.dispose();
+		createScreenMesh.then((mesh) => {
+			mesh.geometry.dispose();
+			mesh.material.dispose();
+		});
+	});
 </script>
 
 <video
 	class="hidden"
 	{@attach (video) => {
-		const videoTexture = new VideoTexture(video);
+		const videoTexture = new t.VideoTexture(video);
 		videoTexture.flipY = false;
-		videoTexture.colorSpace = SRGBColorSpace;
+		videoTexture.colorSpace = t.SRGBColorSpace;
 
-		const videoSrcSet = streamPromise.then((stream) => {
-			const geometry = new BoxGeometry();
-			const material = new MeshBasicMaterial({
+		const videoSrcSet = createStream.then((stream) => {
+			const geometry = new t.BoxGeometry();
+			const material = new t.MeshBasicMaterial({
 				map: videoTexture,
 			});
-			const mesh = new Mesh(geometry, material);
+			const mesh = new t.Mesh(geometry, material);
 			renderTargetScene.add(mesh);
 			const lastSrcObject = video.srcObject;
 			video.srcObject = stream;
@@ -170,22 +196,20 @@
 </video>
 <div class="relative">
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-					renderer.getSize(rendererSize);
-					renderTarget.setSize(rendererSize.width, rendererSize.height);
-				}
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
+			const setAnimationLoopPromise = renderer.setAnimationLoop(() => {
 				renderTargetScene.rotateY((1 / 240) * Math.PI);
 
 				const last = renderer.getRenderTarget();

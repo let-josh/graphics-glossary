@@ -5,13 +5,13 @@ sidebar:
 title: Vertex Colors
 ---
 
-import SimpleApp from "@components/examples/shaders/vertex-colors/simple/app.svelte";
+import App from "@components/examples/shaders/vertex-colors/app.svelte";
 
 import { TabItem, Tabs } from "@astrojs/starlight/components";
 
 Assigns a color to each vertex of a geometry. Colors are interpolated just like any other buffer attribute.
 
-<SimpleApp client:only="svelte" />
+<App client:visible />
 
 ## Why
 

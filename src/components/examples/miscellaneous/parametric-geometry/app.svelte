@@ -2,8 +2,8 @@
 	lang="ts"
 	module
 >
-	const cameraTranslationAxis = new Vector3(1, 1, 1).normalize();
-	const cameraTranslationAmount = 5;
+	const CAMERA_TRANSLATION_AXIS = new t.Vector3(1, 1, 1).normalize();
+	const CAMERA_TRANSLATION_AMOUNT = 5;
 
 	const detail = 1 << 8;
 </script>
@@ -11,70 +11,68 @@
 <script lang="ts">
 	import { controls } from "@attachments/controls";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { pringle } from "@functions/parametric/pringle";
 	import { createSphube } from "@functions/parametric/sphube";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 	import { ParametricGeometry } from "three/examples/jsm/geometries/ParametricGeometry.js";
-	import {
-		DoubleSide,
-		Group,
-		Mesh,
-		MeshNormalMaterial,
-		PerspectiveCamera,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const material = createDisposed(MeshNormalMaterial, {
-		side: DoubleSide,
+	const material = new t.MeshNormalMaterial({
+		side: t.DoubleSide,
 	});
 
-	const sphubeGeometry = createDisposed(
-		ParametricGeometry,
-		createSphube(),
-		detail,
-		detail,
-	);
-	const pringleGeometry = createDisposed(
-		ParametricGeometry,
-		pringle,
-		detail,
-		detail,
-	);
+	const sphubeGeometry = new ParametricGeometry(createSphube(), detail, detail);
+	const pringleGeometry = new ParametricGeometry(pringle, detail, detail);
 
-	const sphubeMesh = new Mesh(sphubeGeometry, material).translateX(-1);
-	const pringleMesh = new Mesh(pringleGeometry, material).translateX(1);
+	onCleanup(() => {
+		material.dispose();
+		sphubeGeometry.dispose();
+		pringleGeometry.dispose();
+	});
 
-	const group = new Group().add(pringleMesh, sphubeMesh);
+	const sphubeMesh = new t.Mesh(sphubeGeometry, material).translateX(-1);
+	const pringleMesh = new t.Mesh(pringleGeometry, material).translateX(1);
 
-	const camera = new PerspectiveCamera().translateOnAxis(
-		cameraTranslationAxis,
-		cameraTranslationAmount,
+	const group = new t.Group().add(pringleMesh, sphubeMesh);
+
+	const camera = new t.PerspectiveCamera().translateOnAxis(
+		CAMERA_TRANSLATION_AXIS,
+		CAMERA_TRANSLATION_AMOUNT,
 	);
 
 	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;
+
+	const canvasSize = new Size();
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
 </script>
 
 <canvas
-	class="aspect-square md:aspect-video"
+	bind:clientWidth={canvasSize.width}
+	bind:clientHeight={canvasSize.height}
 	{@attach controls(orbit)}
 	{@attach (canvas) => {
-		const renderer = new WebGPURenderer({
+		const renderer = new t.WebGPURenderer({
 			antialias: true,
 			canvas,
 		});
 
-		const setAnimationLoop = renderer.setAnimationLoop(() => {
-			if (resize(renderer)) {
-				const aspect = canvas.clientWidth / canvas.clientHeight;
-				setCameraAspect(camera, aspect);
-			}
+		$effect(() => {
+			setRendererSize(renderer, rendererSize);
+		});
 
+		const setAnimationLoop = renderer.setAnimationLoop(() => {
 			orbit.update();
 			renderer.render(group, camera);
 		});

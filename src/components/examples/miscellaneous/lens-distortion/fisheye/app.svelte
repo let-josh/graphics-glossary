@@ -9,7 +9,7 @@
 
 	const ZOOM = 100;
 
-	const axis = new Vector3(1, 1, 1).normalize();
+	const axis = new t.Vector3(1, 1, 1).normalize();
 </script>
 
 <script lang="ts">
@@ -17,79 +17,76 @@
 
 	import { controls } from "@attachments/controls";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraPlanes } from "@functions/setCameraPlanes";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-	import {
-		CubeCamera,
-		CubeRenderTarget,
-		Mesh,
-		MeshBasicMaterial,
-		OrthographicCamera,
-		PerspectiveCamera,
-		Scene,
-		SphereGeometry,
-		Vector2,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const scene = new Scene();
+	const scene = new t.Scene();
 	gltfLoader.loadAsync(gltfUrl).then((gltf) => {
 		scene.add(gltf.scene);
 	});
 
-	const orthoCamera = new OrthographicCamera().translateZ(ZOOM);
+	const orthoCamera = new t.OrthographicCamera().translateZ(ZOOM);
 	orthoCamera.zoom = ZOOM;
 
-	const renderTarget = createDisposed(CubeRenderTarget, RESOLUTION);
+	const renderTarget = new t.CubeRenderTarget(RESOLUTION);
 
-	const cubeCamera = new CubeCamera(
+	const cubeCamera = new t.CubeCamera(
 		orthoCamera.near,
 		orthoCamera.far,
 		renderTarget,
 	);
 
-	const geometry = createDisposed(SphereGeometry);
-	const material = createDisposed(MeshBasicMaterial, {
+	const geometry = new t.SphereGeometry();
+	const material = new t.MeshBasicMaterial({
 		envMap: renderTarget.texture,
 	});
-	const sphere = new Mesh(geometry, material);
+	const sphere = new t.Mesh(geometry, material);
 
-	const rendererSize = new Vector2();
-
-	const dummyCamera = new PerspectiveCamera().translateOnAxis(axis, 1.5);
+	const dummyCamera = new t.PerspectiveCamera().translateOnAxis(axis, 1.5);
 	const orbit = new OrbitControls(dummyCamera);
 
 	onCleanup(() => {
-		renderTarget.dispose();
 		geometry.dispose();
 		material.dispose();
+		renderTarget.dispose();
+	});
+
+	const canvasSize = new Size();
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	$effect(() => {
+		setCameraPlanes(orthoCamera, rendererSize.width, rendererSize.height);
 	});
 </script>
 
 <canvas
-	class="aspect-square md:aspect-video"
+	bind:clientWidth={canvasSize.width}
+	bind:clientHeight={canvasSize.height}
 	{@attach controls(orbit)}
 	{@attach (canvas) => {
-		const renderer = new WebGPURenderer({
+		const renderer = new t.WebGPURenderer({
 			antialias: true,
 			canvas,
 		});
 
-		const setAnimationLoop = renderer.setAnimationLoop(() => {
-			if (resize(renderer)) {
-				renderer.getSize(rendererSize).multiplyScalar(0.5);
-				setCameraPlanes(orthoCamera, rendererSize.width, rendererSize.height);
+		const v = new t.Vector2();
 
-				const radius = Math.hypot(...rendererSize) / orthoCamera.zoom;
-				sphere.scale.setScalar(radius);
-			}
+		$effect(() => {
+			setRendererSize(renderer, rendererSize);
+
+			const radius = renderer.getSize(v).length() / orthoCamera.zoom;
+			sphere.scale.setScalar(radius);
+		});
+
+		const setAnimationLoop = renderer.setAnimationLoop(() => {
 			cubeCamera.position.copy(dummyCamera.position);
 			cubeCamera.lookAt(orbit.target);
 

@@ -16,34 +16,28 @@
 </script>
 
 <script lang="ts">
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { lerp } from "three/src/math/MathUtils.js";
-	import type { BufferGeometry } from "three/webgpu";
-	import {
-		IcosahedronGeometry,
-		LOD,
-		Mesh,
-		MeshNormalMaterial,
-		PerspectiveCamera,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const lod = new LOD();
+	const lod = new t.LOD();
 
-	const geometries: BufferGeometry[] = [];
+	const geometries: t.BufferGeometry[] = [];
 
-	const material = new MeshNormalMaterial({
+	const material = new t.MeshNormalMaterial({
 		flatShading: true,
 	});
 
 	for (let i = 0, l = distances.length; i < l; i += 1) {
-		const geometry = new IcosahedronGeometry(radius, i);
+		const geometry = new t.IcosahedronGeometry(radius, i);
 
 		geometries.push(geometry);
-		const object = new Mesh(geometry, material);
+		const object = new t.Mesh(geometry, material);
 
 		const distance = distances[i];
 
@@ -58,22 +52,31 @@
 
 	const cameraPositionZEnd = 2 + lod.position.z + radius;
 
-	const camera = new PerspectiveCamera();
+	const camera = new t.PerspectiveCamera();
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
 </script>
 
 <canvas
-	class="aspect-square md:aspect-video"
+	bind:clientWidth={canvasSize.width}
+	bind:clientHeight={canvasSize.height}
 	{@attach (canvas) => {
-		const renderer = new WebGPURenderer({
+		const renderer = new t.WebGPURenderer({
 			antialias: true,
 			canvas,
 		});
 
+		$effect(() => {
+			setRendererSize(renderer, rendererSize);
+		});
+
 		const setAnimationLoop = renderer.setAnimationLoop((time) => {
-			if (resize(renderer)) {
-				const aspect = canvas.clientWidth / canvas.clientHeight;
-				setCameraAspect(camera, aspect);
-			}
 			time = 0.5 * (1 + Math.sin(time * speed));
 			camera.position.z = lerp(cameraPositionZStart, cameraPositionZEnd, time);
 

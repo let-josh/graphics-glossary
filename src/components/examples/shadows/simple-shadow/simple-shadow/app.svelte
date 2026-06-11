@@ -2,7 +2,7 @@
 	lang="ts"
 	module
 >
-	const cameraTranslationAxis = new Vector3(1, 1, 1).normalize();
+	const cameraTranslationAxis = new t.Vector3(1, 1, 1).normalize();
 	const positionYInitial = 2.5;
 	const speed = 1 / 1000;
 
@@ -22,81 +22,87 @@
 
 	import { controls } from "@attachments/controls";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
-	import { resize } from "@functions/resize";
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { lerp } from "three/src/math/MathUtils.js";
-	import {
-		CanvasTexture,
-		Group,
-		Mesh,
-		MeshBasicMaterial,
-		MeshNormalMaterial,
-		PerspectiveCamera,
-		PlaneGeometry,
-		Scene,
-		SphereGeometry,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
+	import { texture } from "three/tsl";
 
-	const textureCanvas = new OffscreenCanvas(
-		textureCanvasSize,
-		textureCanvasSize,
-	);
+	$effect(() => {
+		const textureCanvas = new OffscreenCanvas(
+			textureCanvasSize,
+			textureCanvasSize,
+		);
+		const context = textureCanvas.getContext("2d");
+		// can't really do anything if the context is null so just let the boundary catch the error
+		if (context === null) throw new Error("canvas texture context is null");
 
-	const context = textureCanvas.getContext("2d");
-	// can't really do anything if the context is null so just let the boundary catch the error
-	if (context === null) {
-		throw new Error("canvas texture context is null");
-	}
+		const gradient = createShadowGradient(context);
+		context.fillStyle = gradient;
+		context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
-	const gradient = createShadowGradient(context, "#ffffff");
-	context.fillStyle = gradient;
-	context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+		colorNode.value = new t.CanvasTexture(textureCanvas);
+	});
 
-	const shadowTexture = createDisposed(CanvasTexture, textureCanvas);
+	const colorNode = texture();
 
-	const shadowMaterial = createDisposed(MeshBasicMaterial, {
-		color: "#000000",
+	const shadowMaterial = new t.MeshBasicNodeMaterial({
 		depthWrite: false,
-		map: shadowTexture,
+		colorNode,
 		transparent: true,
 	});
 
-	const shadowGeometry = createDisposed(
-		PlaneGeometry,
-		sphereDiameter,
-		sphereDiameter,
+	const shadowGeometry = new t.PlaneGeometry(sphereDiameter, sphereDiameter);
+	const shadowMesh = new t.Mesh(shadowGeometry, shadowMaterial).translateZ(
+		0.01,
 	);
-	const shadowMesh = new Mesh(shadowGeometry, shadowMaterial).translateZ(0.01);
 
-	const floorGeometry = createDisposed(PlaneGeometry, floorSize, floorSize);
+	const floorGeometry = new t.PlaneGeometry(floorSize, floorSize);
 
-	const floorMaterial = createDisposed(MeshBasicMaterial, {
+	const floorMaterial = new t.MeshBasicMaterial({
 		color: "#ccccaa",
 	});
 
-	const floorMesh = new Mesh(floorGeometry, floorMaterial);
+	const floorMesh = new t.Mesh(floorGeometry, floorMaterial);
 
-	const group = new Group()
+	const group = new t.Group()
 		.add(shadowMesh, floorMesh)
 		.rotateX(-1 * 0.5 * Math.PI);
 
-	const sphereGeometry = createDisposed(SphereGeometry);
-	const sphereMaterial = createDisposed(MeshNormalMaterial);
-	const sphereMesh = new Mesh(sphereGeometry, sphereMaterial);
+	const sphereGeometry = new t.SphereGeometry();
+	const sphereMaterial = new t.MeshNormalMaterial();
+	const sphereMesh = new t.Mesh(sphereGeometry, sphereMaterial);
 
-	const scene = new Scene().add(sphereMesh, group);
+	const scene = new t.Scene().add(sphereMesh, group);
 
-	const camera = new PerspectiveCamera().translateOnAxis(
+	const camera = new t.PerspectiveCamera().translateOnAxis(
 		cameraTranslationAxis,
 		cameraTranslationAmount,
 	);
 
 	const orbit = new OrbitControls(camera);
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	onCleanup(() => {
+		sphereMaterial.dispose();
+		sphereGeometry.dispose();
+		floorMaterial.dispose();
+		floorGeometry.dispose();
+		shadowGeometry.dispose();
+		shadowMaterial.dispose();
+	});
 </script>
 
 <svelte:boundary>
@@ -106,20 +112,20 @@
 </svelte:boundary>
 
 <canvas
-	class="aspect-square md:aspect-video"
+	bind:clientWidth={canvasSize.width}
+	bind:clientHeight={canvasSize.height}
 	{@attach controls(orbit)}
 	{@attach (canvas) => {
-		const renderer = new WebGPURenderer({
+		const renderer = new t.WebGPURenderer({
 			antialias: true,
 			canvas,
 		});
 
-		const setAnimationLoop = renderer.setAnimationLoop((time) => {
-			if (resize(renderer)) {
-				const aspect = canvas.clientWidth / canvas.clientHeight;
-				setCameraAspect(camera, aspect);
-			}
+		$effect(() => {
+			setRendererSize(renderer, rendererSize);
+		});
 
+		const setAnimationLoop = renderer.setAnimationLoop((time) => {
 			const t = 0.5 * (1 + Math.sin(time * speed));
 
 			sphereMesh.position.y = lerp(

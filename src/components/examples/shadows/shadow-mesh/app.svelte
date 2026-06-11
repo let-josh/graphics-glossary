@@ -2,9 +2,13 @@
 	lang="ts"
 	module
 >
-	const yHat = new Vector3(0, 1, 0);
+	const yHat = new t.Vector3(0, 1, 0);
 
-	const DIRECTIONAL_LIGHT_TRANSLATION_AXIS = new Vector3(1, 1, -1).normalize();
+	const DIRECTIONAL_LIGHT_TRANSLATION_AXIS = new t.Vector3(
+		1,
+		1,
+		-1,
+	).normalize();
 	const DIRECTIONAL_LIGHT_TRANSLATION_AMOUNT = 7;
 
 	const DEGREES = 1;
@@ -13,7 +17,7 @@
 	const FLOOR_SIZE = 15;
 	const FLOOR_COLOR = "#ccccaa";
 
-	const CAMERA_TRANSLATION_AXIS = new Vector3(1, 1, 1).normalize();
+	const CAMERA_TRANSLATION_AXIS = new t.Vector3(1, 1, 1).normalize();
 	const CAMERA_TRANSLATION_AMOUNT = 20;
 </script>
 
@@ -21,39 +25,24 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
-	import { Size } from "@classes/size.svelte";
+	import { RendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
-	import { devicePixelRatio } from "svelte/reactivity/window";
-	import {
-		DirectionalLight,
-		DirectionalLightHelper,
-		Mesh,
-		MeshBasicMaterial,
-		MeshNormalMaterial,
-		Object3D,
-		PerspectiveCamera,
-		Plane,
-		PlaneGeometry,
-		Scene,
-		TorusKnotGeometry,
-		Vector3,
-		Vector4,
-		WebGLRenderer,
-	} from "three";
+	import * as t from "three";
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { ShadowMesh } from "three/examples/jsm/objects/ShadowMesh.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 
 	let rotateMesh = $state(true);
 
-	const geometry = createDisposed(TorusKnotGeometry);
-	const material = createDisposed(MeshNormalMaterial);
-	const mesh = new Mesh(geometry, material).translateY(2);
+	const geometry = new t.TorusKnotGeometry();
+	const material = new t.MeshNormalMaterial();
+	const mesh = new t.Mesh(geometry, material).translateY(2);
 
 	const shadowMesh = new ShadowMesh(mesh);
 
@@ -62,33 +51,33 @@
 	const planeOffset = 0.01;
 	const planeConstant = floorY + planeOffset;
 
-	const plane = new Plane(yHat, planeConstant);
+	const plane = new t.Plane(yHat, planeConstant);
 
-	const floorGeometry = createDisposed(PlaneGeometry, FLOOR_SIZE, FLOOR_SIZE);
+	const floorGeometry = new t.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE);
 
-	const floorMaterial = createDisposed(MeshBasicMaterial, {
+	const floorMaterial = new t.MeshBasicMaterial({
 		color: FLOOR_COLOR,
 	});
 
-	const floorMesh = new Mesh(floorGeometry, floorMaterial);
+	const floorMesh = new t.Mesh(floorGeometry, floorMaterial);
 	floorMesh.lookAt(plane.normal);
 
-	const light = createDisposed(DirectionalLight).translateOnAxis(
+	const light = new t.DirectionalLight().translateOnAxis(
 		DIRECTIONAL_LIGHT_TRANSLATION_AXIS,
 		DIRECTIONAL_LIGHT_TRANSLATION_AMOUNT,
 	);
 
 	light.target = mesh;
 
-	const lightHelper = createDisposed(DirectionalLightHelper, light);
+	const lightHelper = new t.DirectionalLightHelper(light);
 
-	const lightPosition4D = new Vector4(...light.position, 0.01);
+	const lightPosition4D = new t.Vector4(...light.position, 0.01);
 
-	const objects: Object3D[] = [mesh, shadowMesh, floorMesh, lightHelper];
+	const objects: t.Object3D[] = [mesh, shadowMesh, floorMesh, lightHelper];
 
-	const scene = new Scene().add(...objects);
+	const scene = new t.Scene().add(...objects);
 
-	const camera = new PerspectiveCamera().translateOnAxis(
+	const camera = new t.PerspectiveCamera().translateOnAxis(
 		CAMERA_TRANSLATION_AXIS,
 		CAMERA_TRANSLATION_AMOUNT,
 	);
@@ -99,9 +88,20 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
 	let animationLoop: null | (() => void) = null;
 
 	const orbit = new OrbitControls(camera);
+
+	onCleanup(() => {
+		geometry.dispose();
+		material.dispose();
+		floorGeometry.dispose();
+		floorMaterial.dispose();
+		light.dispose();
+		lightHelper.dispose();
+	});
 </script>
 
 <div class="relative">
@@ -134,14 +134,10 @@
 		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGLRenderer({
+			const renderer = new t.WebGLRenderer({
 				antialias: true,
 				canvas,
 				stencil: true,
-			});
-
-			$effect(() => {
-				renderer.setPixelRatio(devicePixelRatio.current ?? 1);
 			});
 
 			const render = () => {
@@ -149,7 +145,7 @@
 			};
 
 			$effect(() => {
-				renderer.setSize(canvasSize.width, canvasSize.height, false);
+				renderer.setSize(rendererSize.width, rendererSize.height, false);
 				if (animationLoop === null) render();
 			});
 

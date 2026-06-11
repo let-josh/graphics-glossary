@@ -1,41 +1,42 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "include": [
-    ".astro/types.d.ts",
-    "**/*",
-    "./worker-configuration.d.ts"
-  ],
-  "compilerOptions": {
-    "baseUrl": ".",
-    "module": "esnext",
-    "paths": {
-      "@assets/*": [
-        "./src/assets/*"
-      ],
-      "@attachments/*": [
-        "./src/attachments/*"
-      ],
-      "@classes/*": [
-        "./src/classes/*"
-      ],
-      "@components/*": [
-        "./src/components/*"
-      ],
-      "@constants/*": [
-        "./src/constants/*"
-      ],
-      "@contexts/*": [
-        "./src/contexts/*"
-      ],
-      "@functions/*": [
-        "./src/functions/*"
-      ],
-      "@types": [
-        "./src/types/*"
-      ]
-    }
-  },
-  "exclude": [
-    "dist"
-  ]
+	"extends": "astro/tsconfigs/strict",
+	"include": [
+		".astro/types.d.ts",
+		"**/*",
+		"./worker-configuration.d.ts"
+	],
+	"compilerOptions": {
+		"noUncheckedIndexedAccess": true,
+		"baseUrl": ".",
+		"module": "esnext",
+		"paths": {
+			"@assets/*": [
+				"./src/assets/*"
+			],
+			"@attachments/*": [
+				"./src/attachments/*"
+			],
+			"@classes/*": [
+				"./src/classes/*"
+			],
+			"@components/*": [
+				"./src/components/*"
+			],
+			"@constants/*": [
+				"./src/constants/*"
+			],
+			"@contexts/*": [
+				"./src/contexts/*"
+			],
+			"@functions/*": [
+				"./src/functions/*"
+			],
+			"@types": [
+				"./src/types/*"
+			]
+		}
+	},
+	"exclude": [
+		"dist"
+	]
 }

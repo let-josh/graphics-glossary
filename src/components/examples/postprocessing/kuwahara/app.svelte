@@ -14,48 +14,49 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import {
 		GLTFLoader,
 		HDRLoader,
 		OrbitControls,
 	} from "three/examples/jsm/Addons.js";
-	import { mix, pass, screenUV, step, texture, uniform } from "three/tsl";
 	import {
-		EquirectangularReflectionMapping,
-		PerspectiveCamera,
-		RenderPipeline,
-		Scene,
-		WebGPURenderer,
-	} from "three/webgpu";
+		mix,
+		pass,
+		pmremTexture,
+		screenUV,
+		step,
+		texture,
+		uniform,
+	} from "three/tsl";
 
-	const scene = new Scene();
-	const camera = new PerspectiveCamera();
+	const scene = new t.Scene();
 
-	const orbit = new OrbitControls(camera);
-	orbit.autoRotate = true;
+	const setEnvironment = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+		const lastBackground = scene.backgroundNode;
+		const lastEnvironment = scene.environmentNode;
 
-	const cleanupHdr = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
-		hdr.mapping = EquirectangularReflectionMapping;
-		const lastBackground = scene.background;
-		const lastEnvironment = scene.environment;
-		scene.background = scene.environment = hdr;
+		const environment = pmremTexture(hdr);
+		scene.backgroundNode = scene.environmentNode = environment.rgb;
 		return () => {
-			scene.background = lastBackground;
-			scene.environment = lastEnvironment;
-			hdr.dispose();
+			scene.backgroundNode = lastBackground;
+			scene.environmentNode = lastEnvironment;
+			environment.value.dispose();
 		};
 	});
 
 	onCleanup(() => {
-		cleanupHdr.then((cleanup) => {
+		setEnvironment.then((cleanup) => {
 			cleanup();
 		});
 	});
@@ -65,10 +66,22 @@
 		scene.add(gltf.scene);
 	});
 
+	const camera = new t.PerspectiveCamera();
+
+	const orbit = new OrbitControls(camera);
+	orbit.autoRotate = true;
+
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
 	const uSize = uniform(3);
+
+	const canvasSize = new Size();
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
 </script>
 
 <div class="relative">
@@ -98,15 +111,20 @@
 		)}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const renderPipeline = new RenderPipeline(renderer);
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
+
+			const renderPipeline = new t.RenderPipeline(renderer);
 
 			renderPipeline.outputNode = mix(
 				kuwahara(tex, { size: uSize.toInt() }),
@@ -115,11 +133,6 @@
 			);
 
 			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
-
 				if (orbit.autoRotate) orbit.update();
 
 				renderPipeline.render();

@@ -2,100 +2,97 @@
 	module
 	lang="ts"
 >
-	import audioUrl from "@assets/audio/Stadium-Rave-A.ogg";
-	import environmentTextureUrl from "@assets/hdrs/university_workshop_1k.hdr";
-
-	const hdrLoader = new HDRLoader();
-
-	const audioLoader = new AudioLoader();
+	const audioLoader = new t.AudioLoader();
+	const FFT_SIZE = 256;
 </script>
 
 <script lang="ts">
 	import { createOutline } from "./createOutline";
 
+	import audioUrl from "@assets/audio/Stadium-Rave-A.ogg";
+
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
+
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
-	import { HDRLoader, OrbitControls } from "three/examples/jsm/Addons.js";
-	import {
-		Audio,
-		AudioAnalyser,
-		AudioListener,
-		AudioLoader,
-		EquirectangularReflectionMapping,
-		Group,
-		Mesh,
-		MeshBasicMaterial,
-		MeshStandardMaterial,
-		PerspectiveCamera,
-		Scene,
-		TorusKnotGeometry,
-		WebGPURenderer,
-	} from "three/webgpu";
+	import * as t from "three/webgpu";
+	import { OrbitControls } from "three/examples/jsm/Addons.js";
+	import { Pane } from "tweakpane";
 
-	const listener = new AudioListener();
-	const audio = new Audio(listener);
-	audio.setLoop(true);
+	const camera = new t.PerspectiveCamera().translateZ(7);
 
-	const buffer = await audioLoader.loadAsync(audioUrl);
-	audio.setBuffer(buffer);
+	const { promise, resolve } = Promise.withResolvers<AudioBuffer>();
 
-	const audioAnalyser = new AudioAnalyser(audio, 256);
-
-	const environmentTexture = await hdrLoader.loadAsync(environmentTextureUrl);
-	environmentTexture.mapping = EquirectangularReflectionMapping;
-	onCleanup(() => {
-		environmentTexture.dispose();
+	$effect(() => {
+		audioLoader.loadAsync(audioUrl).then(resolve);
 	});
+
+	const createAudio = promise.then((buffer) => {
+		const listener = new t.AudioListener();
+		camera.add(listener);
+		const audio = new t.Audio(listener);
+		audio.setLoop(true);
+		return audio.setBuffer(buffer);
+	});
+
+	createAudio.then((audio) => {
+		camera.add(audio.listener);
+	});
+
+	const createAudioAnalyzer = createAudio.then(
+		(audio) => new t.AudioAnalyser(audio, FFT_SIZE),
+	);
 
 	const { materialParameters, outlineMaterialParameters } = createOutline();
 
-	const geometry = createDisposed(TorusKnotGeometry);
-	const material = createDisposed(MeshStandardMaterial, {
-		...materialParameters,
-		roughness: 0.5,
-		metalness: 0.9,
-	});
-	const mesh = new Mesh(geometry, material);
+	const geometry = new t.TorusKnotGeometry();
+	const material = new t.MeshBasicMaterial(materialParameters);
+	const mesh = new t.Mesh(geometry, material);
 
-	const outlineMaterial = createDisposed(MeshBasicMaterial, {
+	const outlineMaterial = new t.MeshBasicMaterial({
 		color: "black",
 		depthTest: false,
 		...outlineMaterialParameters,
 	});
 
-	const outline = new Mesh(geometry, outlineMaterial);
-	outline.scale.setScalar(1.05);
+	onCleanup(() => {
+		outlineMaterial.dispose();
+		material.dispose();
+		geometry.dispose();
+	});
 
-	const group = new Group().add(mesh, outline);
-	const scene = new Scene().add(group);
-	scene.environment = scene.background = environmentTexture;
+	const outline = new t.Mesh(geometry, outlineMaterial);
 
-	const camera = new PerspectiveCamera().translateZ(7);
-	camera.add(listener);
+	const group = new t.Group().add(mesh, outline);
+	const scene = new t.Scene().add(group);
+	scene.background = new t.Color("#a37287");
 
 	const orbit = new OrbitControls(camera);
 
-	let lastTime = 0;
+	const canvasSize = new Size();
+	const rendererSize = RendererSize.fromSize(canvasSize);
 
-	const outlineScale = 0.3;
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
 </script>
 
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "outline",
-			},
-			(pane) => {
+			});
+
+			const addBindings = createAudio.then((audio) => {
 				pane.addBinding(outline, "visible");
 				const audioFolder = pane.addFolder({
 					title: "audio",
@@ -120,40 +117,47 @@
 						play.disabled = false;
 						pause.disabled = !play.disabled;
 					});
-			},
-		)}
+			});
+
+			return () => {
+				addBindings.then(() => {
+					pane.dispose();
+				});
+			};
+		}}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 				forceWebGL: true,
 				stencil: true,
 			});
 
-			const setAnimationLoop = renderer.setAnimationLoop((time) => {
-				const dt = time - lastTime;
-				group.rotateY(dt / 1000);
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
+			let lastTime = 0;
+			const setAnimationLoop = createAudioAnalyzer.then((analyzer) => {
+				return renderer.setAnimationLoop((time) => {
+					const dt = time - lastTime;
+					group.rotateY(dt / 1000);
 
-				if (audio.isPlaying) {
-					let scale = audioAnalyser.getAverageFrequency();
+					let scale = analyzer.getAverageFrequency();
 					scale /= 255; // 0 -> 1
-					scale *= outlineScale; // 0 -> s
+					scale *= 0.5; // 0 -> s
 					scale += 1; // 1 -> 1 + s
 					outline.scale.setScalar(scale);
-				}
 
-				renderer.render(scene, camera);
+					renderer.render(scene, camera);
 
-				lastTime = time;
+					lastTime = time;
+				});
 			});
 
 			return () => {

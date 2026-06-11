@@ -26,45 +26,69 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: "Data Buffers",
-					autogenerate: {
-						directory: "data-buffers",
-					},
+					items: [
+						{
+							autogenerate: { directory: "data-buffers" },
+						},
+					],
 				},
 				{
 					label: "Shaders",
-					autogenerate: {
-						directory: "shaders",
-					},
+					items: [
+						{
+							autogenerate: { directory: "shaders" },
+						},
+					],
 				},
 				{
 					label: "Postprocessing",
-					autogenerate: {
-						directory: "postprocessing",
-					},
+					items: [
+						{
+							autogenerate: {
+								directory: "postprocessing",
+							},
+						},
+					],
 				},
 				{
 					label: "Shadows",
-					autogenerate: {
-						directory: "shadows",
-					},
+					items: [
+						{
+							autogenerate: {
+								directory: "shadows",
+							},
+						},
+					],
 				},
 				{
 					label: "Techniques",
-					autogenerate: {
-						directory: "techniques",
-					},
+					items: [
+						{
+							autogenerate: {
+								directory: "techniques",
+							},
+						},
+					],
 				},
 				{
 					label: "Environment Mapping",
-					autogenerate: {
-						directory: "environment-mapping",
-					},
+					items: [
+						{
+							autogenerate: {
+								directory: "environment-mapping",
+							},
+						},
+					],
 				},
 				{
 					label: "Miscellaneous",
-					autogenerate: {
-						directory: "miscellaneous",
-					},
+					items: [
+						{
+							autogenerate: {
+								directory: "miscellaneous",
+							},
+						},
+					],
 				},
 			],
 			social: [

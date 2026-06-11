@@ -16,32 +16,21 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { resize } from "@functions/resize";
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import {
-		normalView,
-		normalWorld,
-		positionViewDirection,
-		positionWorldDirection,
-		uniform,
-	} from "three/tsl";
-	import {
-		Color,
-		Mesh,
-		MeshBasicNodeMaterial,
-		PerspectiveCamera,
-		TorusKnotGeometry,
-		WebGPURenderer,
-	} from "three/webgpu";
+	import { normalWorld, positionWorldDirection, uniform } from "three/tsl";
 
-	const baseColorUniform = uniform(new Color("#583583"));
-	const fresnelColorUniform = uniform(new Color("#ccccaa"));
+	const baseColorUniform = uniform(new t.Color("#583583"));
+	const fresnelColorUniform = uniform(new t.Color("#ccccaa"));
 	const powerUniform = uniform(POWER_DEFAULT);
 
 	const fresnel = f.pow(powerUniform).mul(baseColorUniform);
@@ -50,15 +39,15 @@
 		.pow(powerUniform)
 		.mul(fresnelColorUniform);
 
-	const material = createDisposed(MeshBasicNodeMaterial, {
+	const material = new t.MeshBasicNodeMaterial({
 		colorNode: fresnel.add(inverseFresnel),
 	});
 
-	const geometry = createDisposed(TorusKnotGeometry);
+	const geometry = new t.TorusKnotGeometry();
 
-	const mesh = new Mesh(geometry, material);
+	const mesh = new t.Mesh(geometry, material);
 
-	const camera = new PerspectiveCamera();
+	const camera = new t.PerspectiveCamera();
 	fitCameraToObject(camera, mesh, {
 		fudge: 1.1,
 	});
@@ -70,6 +59,19 @@
 
 	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	onCleanup(() => {
+		material.dispose();
+		geometry.dispose();
+	});
 </script>
 
 <div class="relative">
@@ -106,20 +108,20 @@
 		)}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				orbit.update();
 				renderer.render(mesh, camera);
 			});

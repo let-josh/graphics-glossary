@@ -2,7 +2,7 @@
 	lang="ts"
 	module
 >
-	const CAMERA_TRANSLATION_AXIS = new Vector3(0, 1, 1).normalize();
+	const CAMERA_TRANSLATION_AXIS = new t.Vector3(0, 1, 1).normalize();
 	const CAMERA_TRANSLATION_AMOUNT = 10;
 
 	const PLANE_SIZE = 5;
@@ -15,50 +15,35 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
-	import { resize } from "@functions/resize";
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { gaussianBlur } from "three/addons/tsl/display/GaussianBlurNode.js";
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import { depth, texture, uniform, vec3 } from "three/tsl";
-	import {
-		Color,
-		Mesh,
-		MeshNormalMaterial,
-		NodeMaterial,
-		OrthographicCamera,
-		PerspectiveCamera,
-		PlaneGeometry,
-		RenderTarget,
-		Scene,
-		TorusKnotGeometry,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
 
 	const uDarkness = uniform(1);
 	const uShadowOpacity = uniform(1);
 	const uBlur = uniform(3.5);
 
-	const depthMaterial = createDisposed(NodeMaterial);
+	const depthMaterial = new t.NodeMaterial();
 	depthMaterial.colorNode = vec3();
 	depthMaterial.opacityNode = depth.oneMinus().mul(uDarkness);
 	depthMaterial.depthTest = false;
 	depthMaterial.depthWrite = false;
 
 	const renderTargetSize = 1 << 8;
-	const renderTarget = createDisposed(
-		RenderTarget,
-		renderTargetSize,
-		renderTargetSize,
-	);
+	const renderTarget = new t.RenderTarget(renderTargetSize, renderTargetSize);
 	renderTarget.texture.generateMipmaps = false;
 
-	const shadowPlaneMaterial = createDisposed(NodeMaterial);
+	const shadowPlaneMaterial = new t.NodeMaterial();
 	shadowPlaneMaterial.transparent = true;
 	shadowPlaneMaterial.depthWrite = false;
 	shadowPlaneMaterial.colorNode = vec3();
@@ -67,17 +52,27 @@
 		uBlur,
 	).a.mul(uShadowOpacity);
 
-	const planeGeometry = createDisposed(PlaneGeometry, PLANE_SIZE, PLANE_SIZE);
+	const shadowPlaneGeometry = new t.PlaneGeometry(PLANE_SIZE, PLANE_SIZE);
 
-	const shadowPlaneMesh = new Mesh(planeGeometry, shadowPlaneMaterial).rotateX(
-		-1 * 0.5 * Math.PI,
-	);
+	const shadowPlaneMesh = new t.Mesh(
+		shadowPlaneGeometry,
+		shadowPlaneMaterial,
+	).rotateX(-1 * 0.5 * Math.PI);
 
-	const meshGeometry = createDisposed(TorusKnotGeometry, 1, 0.4, 64, 8, 3, 1);
-	const meshMaterial = createDisposed(MeshNormalMaterial);
-	const mesh = new Mesh(meshGeometry, meshMaterial).translateY(2);
+	const meshGeometry = new t.TorusKnotGeometry(1, 0.4, 64, 8, 3, 1);
+	const meshMaterial = new t.MeshNormalMaterial();
+	const mesh = new t.Mesh(meshGeometry, meshMaterial).translateY(2);
 
-	const shadowCamera = new OrthographicCamera(
+	onCleanup(() => {
+		meshGeometry.dispose();
+		meshMaterial.dispose();
+		shadowPlaneMaterial.dispose();
+		depthMaterial.dispose();
+		renderTarget.dispose();
+		shadowPlaneGeometry.dispose();
+	});
+
+	const shadowCamera = new t.OrthographicCamera(
 		-1 * HALF_PLANE_SIZE,
 		HALF_PLANE_SIZE,
 		HALF_PLANE_SIZE,
@@ -87,16 +82,24 @@
 	);
 	shadowCamera.lookAt(mesh.position);
 
-	const scene = new Scene().add(shadowPlaneMesh, mesh);
-	scene.background = new Color("#eeeeee");
+	const scene = new t.Scene().add(shadowPlaneMesh, mesh);
+	scene.background = new t.Color("#eeeeee");
 
-	const camera = new PerspectiveCamera().translateOnAxis(
+	const camera = new t.PerspectiveCamera().translateOnAxis(
 		CAMERA_TRANSLATION_AXIS,
 		CAMERA_TRANSLATION_AMOUNT,
 	);
 	camera.lookAt(mesh.position);
 
 	const orbit = new OrbitControls(camera);
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
 </script>
 
 <div class="relative">
@@ -126,20 +129,20 @@
 		})}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				mesh.rotateX(1 * DEG2RAD).rotateZ(0.5 * DEG2RAD);
 
 				const lastBackground = scene.background;

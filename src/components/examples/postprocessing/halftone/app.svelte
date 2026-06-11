@@ -15,10 +15,13 @@
 <script lang="ts">
 	import { halftone } from "./tsl";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import {
 		GLTFLoader,
 		OrbitControls,
@@ -34,24 +37,15 @@
 		texture,
 		uniform,
 	} from "three/tsl";
-	import {
-		Color,
-		PMREMGenerator,
-		PerspectiveCamera,
-		RenderPipeline,
-		Scene,
-		Vector4,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const scene = new Scene();
+	const scene = new t.Scene();
 	const background = {
 		value: "#a37287",
 	};
-	const backgroundColor = new Color(background.value);
+	const backgroundColor = new t.Color(background.value);
 	scene.background = backgroundColor;
 
-	const camera = new PerspectiveCamera();
+	const camera = new t.PerspectiveCamera();
 
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
@@ -70,8 +64,8 @@
 
 	const enabled = uniform(true);
 
-	const degrees = uniform(new Vector4(15, 45, 0, 75));
-	const strengths = uniform(new Vector4(0.7, 1, 1, 0.5));
+	const degrees = uniform(new t.Vector4(15, 45, 0, 75));
+	const strengths = uniform(new t.Vector4(0.7, 1, 1, 0.5));
 
 	const colorLabelsAndKeys = [
 		["cyan", "x"],
@@ -81,6 +75,14 @@
 	] as const;
 
 	const angles = degrees.mul(PI).div(180);
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
 </script>
 
 <div class="relative">
@@ -151,15 +153,20 @@
 		)}
 	/>
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const renderPipeline = new RenderPipeline(renderer);
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
+
+			const renderPipeline = new t.RenderPipeline(renderer);
 			renderPipeline.outputNode = mix(
 				halftone(tex, {
 					angles,
@@ -172,18 +179,13 @@
 			);
 
 			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
-
 				if (orbit.autoRotate) orbit.update();
 
 				renderPipeline.render();
 			});
 
 			const envMapPromise = setAnimationLoop.then(() => {
-				const pmremGenerator = new PMREMGenerator(renderer);
+				const pmremGenerator = new t.PMREMGenerator(renderer);
 				const environment = new RoomEnvironment();
 				const envMap = pmremTexture(
 					pmremGenerator.fromScene(environment).texture,

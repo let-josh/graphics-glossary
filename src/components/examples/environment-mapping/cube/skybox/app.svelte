@@ -9,7 +9,7 @@
 	import posy from "@assets/cubemaps/Lycksele/posy.jpg";
 	import posz from "@assets/cubemaps/Lycksele/posz.jpg";
 
-	const loader = new TextureLoader();
+	const loader = new t.TextureLoader();
 
 	const cubeMapFiles = [
 		posx.src,
@@ -20,7 +20,8 @@
 		negz.src,
 	] as const;
 
-	const SPY_CAMERA_TRANSLATION_AXIS = new Vector3(1, 0.5, 1).normalize();
+	const SPY_CAMERA_TRANSLATION_AXIS = new t.Vector3(1, 0.5, 1).normalize();
+	const SPY_CAMERA_TRANSLATION_AMOUNT = 3;
 
 	const speed = 1 / 4000;
 	const amplitudeY = 0.3;
@@ -30,60 +31,84 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import {
-		BackSide,
-		BoxGeometry,
-		CameraHelper,
-		Mesh,
-		MeshBasicMaterial,
-		PerspectiveCamera,
-		Scene,
-		TextureLoader,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const geometry = createDisposed(BoxGeometry);
-	const textures = await Promise.all(
-		cubeMapFiles.map((url) => loader.loadAsync(url)),
-	);
-	onCleanup(() => {
-		for (const texture of textures) texture.dispose();
+	const { promise, resolve } = Promise.withResolvers<t.Texture[]>();
+
+	$effect(() => {
+		Promise.all(cubeMapFiles.map((url) => loader.loadAsync(url))).then(resolve);
 	});
 
-	const materials = textures.map((texture) =>
-		createDisposed(MeshBasicMaterial, {
-			depthWrite: false,
-			map: texture,
-			side: BackSide,
-		}),
+	const geometry = new t.BoxGeometry();
+
+	const createMaterials = promise.then((textures) =>
+		textures.map(
+			(texture) =>
+				new t.MeshBasicMaterial({
+					depthWrite: false,
+					map: texture,
+					side: t.BackSide,
+				}),
+		),
 	);
 
-	const sceneCamera = new PerspectiveCamera(45, 1, 0.1, 1);
+	const createCube = createMaterials.then(
+		(materials) => new t.Mesh(geometry, materials),
+	);
 
-	const cube = new Mesh(geometry, materials);
-	const helper = createDisposed(CameraHelper, sceneCamera);
+	const sceneCamera = new t.PerspectiveCamera(45, 1, 0.1, 1);
+	const spyCamera = new t.PerspectiveCamera().translateOnAxis(
+		SPY_CAMERA_TRANSLATION_AXIS,
+		SPY_CAMERA_TRANSLATION_AMOUNT,
+	);
+
+	const helper = new t.CameraHelper(sceneCamera);
 	helper.renderOrder += 1;
 	helper.visible = false;
 
-	const spyCamera = new PerspectiveCamera().translateOnAxis(
-		SPY_CAMERA_TRANSLATION_AXIS,
-		3,
-	);
+	const scene = new t.Scene().add(helper);
+	const addCube = createCube.then((cube) => {
+		scene.add(cube);
+		return () => {
+			scene.remove(cube);
+		};
+	});
 
-	const scene = new Scene().add(cube, helper);
 	spyCamera.lookAt(scene.position);
-
 	let camera = sceneCamera;
 	const orbit = new OrbitControls(spyCamera);
+
+	const canvasSize = new Size();
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	onCleanup(() => {
+		geometry.dispose();
+		helper.dispose();
+		addCube.then((removeCube) => {
+			removeCube();
+		});
+		createCube.then((cube) => {
+			cube.geometry.dispose();
+			for (const material of cube.material) {
+				material.map?.dispose();
+				material.map = null;
+				material.dispose();
+			}
+		});
+	});
 </script>
 
 <div class="relative">
@@ -112,21 +137,20 @@
 		)}
 	/>
 	<canvas
-		class="aspect-square"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});
 
-			const setAnimationLoop = renderer.setAnimationLoop((time) => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(spyCamera, aspect);
-					setCameraAspect(sceneCamera, aspect);
-				}
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
+			const setAnimationLoop = renderer.setAnimationLoop((time) => {
 				time *= speed;
 				const c = Math.cos(time);
 				sceneCamera.lookAt(c, amplitudeY * c, Math.sin(time));

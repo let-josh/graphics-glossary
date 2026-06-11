@@ -13,9 +13,9 @@ import negy from '@assets/cubemaps/Lycksele/negy.jpg'
 import posz from '@assets/cubemaps/Lycksele/posz.jpg'
 import negz from '@assets/cubemaps/Lycksele/negz.jpg'
 
-<Skybox client:only="svelte" />
+<Skybox client:visible />
 <Net
-	client:visible="svelte"
+	client:visible
 	posx={posx.src}
 	negx={negx.src}
 	posy={posy.src}
@@ -23,4 +23,4 @@ import negz from '@assets/cubemaps/Lycksele/negz.jpg'
 	posz={posz.src}
 	negz={negz.src}
 />
-<App client:only="svelte" />
+<App client:visible />

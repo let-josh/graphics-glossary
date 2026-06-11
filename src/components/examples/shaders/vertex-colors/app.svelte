@@ -14,10 +14,12 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { createDisposed } from "@functions/createDisposed.svelte";
-	import { resize } from "@functions/resize";
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -31,7 +33,7 @@
 		WebGPURenderer,
 	} from "three/webgpu";
 
-	const geometry = createDisposed(BoxGeometry);
+	const geometry = new BoxGeometry();
 	geometry.setAttribute(
 		"color",
 		geometry
@@ -40,7 +42,7 @@
 			.applyMatrix4(colorAttributeTransformMatrix),
 	);
 
-	const material = createDisposed(MeshBasicMaterial, {
+	const material = new MeshBasicMaterial({
 		vertexColors: true,
 	});
 
@@ -53,6 +55,19 @@
 
 	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
+
+	onCleanup(() => {
+		geometry.dispose();
+		material.dispose();
+	});
 </script>
 
 <div class="relative">
@@ -75,7 +90,8 @@
 	/>
 
 	<canvas
-		class="aspect-square md:aspect-video"
+		bind:clientWidth={canvasSize.width}
+		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
 			const renderer = new WebGPURenderer({
@@ -83,12 +99,11 @@
 				canvas,
 			});
 
-			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (resize(renderer)) {
-					const aspect = canvas.clientWidth / canvas.clientHeight;
-					setCameraAspect(camera, aspect);
-				}
+			$effect(() => {
+				setRendererSize(renderer, rendererSize);
+			});
 
+			const setAnimationLoop = renderer.setAnimationLoop(() => {
 				orbit.update();
 				renderer.render(mesh, camera);
 			});

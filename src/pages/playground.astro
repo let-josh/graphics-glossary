@@ -1,5 +1,5 @@
 ---
-import App from "@components/examples/postprocessing/ascii/app.svelte";
+import App from "@components/examples/ps1/vertex-wobble/app.svelte";
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 ---
 
@@ -10,5 +10,5 @@ import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 		template: "splash",
 	}}
 >
-	<App client:only="svelte" />
+	<App client:visible />
 </StarlightPage>

@@ -3,7 +3,7 @@
 	module
 >
 	const countRegex = /(?<count>\d+).\w+/;
-	const textureLoader = new TextureLoader();
+	const textureLoader = new t.TextureLoader();
 </script>
 
 <script lang="ts">
@@ -11,31 +11,27 @@
 
 	import { controls } from "@attachments/controls";
 
+	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { Size } from "@classes/Size.svelte";
+
 	import { onCleanup } from "@functions/onCleanup.svelte";
-	import { resize } from "@functions/resize";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { texture, uniform, uv, vec2 } from "three/tsl";
-	import {
-		BoxGeometry,
-		Mesh,
-		MeshNormalMaterial,
-		PerspectiveCamera,
-		Scene,
-		Sprite,
-		SpriteNodeMaterial,
-		TextureLoader,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
 
-	const loadSpriteSheet = textureLoader.loadAsync(abaloneSpriteSheetUrl.src);
+	const { promise: loadSpriteSheet, resolve } =
+		Promise.withResolvers<t.Texture>();
 
-	const geometry = new BoxGeometry();
-	const material = new MeshNormalMaterial();
+	$effect(() => {
+		textureLoader.loadAsync(abaloneSpriteSheetUrl.src).then(resolve);
+	});
 
-	const box = new Mesh(geometry, material).translateX(1);
+	const geometry = new t.BoxGeometry();
+	const material = new t.MeshNormalMaterial();
+
+	const box = new t.Mesh(geometry, material).translateX(1);
 	box.scale.setScalar(0.5);
 
 	const matches = abaloneSpriteSheetUrl.src.match(countRegex);
@@ -45,18 +41,18 @@
 	const offset = uniform(0);
 	const w = 1 / count;
 
-	const mainScene = new Scene().add(box);
+	const mainScene = new t.Scene().add(box);
 
-	const axis = new Vector3(0, 0.5, 1).normalize();
-	const mainCamera = new PerspectiveCamera().translateOnAxis(axis, 3);
-	mainCamera.lookAt(mainScene.position);
+	const axis = new t.Vector3(0, 0.5, 1).normalize();
+	const camera = new t.PerspectiveCamera().translateOnAxis(axis, 3);
+	camera.lookAt(mainScene.position);
 
-	const orbit = new OrbitControls(mainCamera);
+	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;
 
 	orbit.addEventListener("change", () => {
 		let angle =
-			Math.atan2(mainCamera.position.z, mainCamera.position.x) - 0.5 * Math.PI;
+			Math.atan2(camera.position.z, camera.position.x) - 0.5 * Math.PI;
 		if (angle < 0) angle += 2 * Math.PI;
 
 		angle /= 2 * Math.PI;
@@ -67,10 +63,10 @@
 	});
 
 	const createSpriteMaterial = loadSpriteSheet.then(
-		(t) =>
-			new SpriteNodeMaterial({
+		(sheet) =>
+			new t.SpriteNodeMaterial({
 				colorNode: texture(
-					t,
+					sheet,
 					uv()
 						.mul(vec2(w, 1))
 						.add(vec2(offset.mul(w), 0)),
@@ -78,8 +74,8 @@
 			}),
 	);
 
-	const createSprite = createSpriteMaterial.then(
-		(material) => new Sprite(material),
+	const createSprite = createSpriteMaterial.then((material) =>
+		new t.Sprite(material).translateX(-1),
 	);
 
 	const addSpriteToScene = createSprite.then((sprite) => {
@@ -96,28 +92,37 @@
 		geometry.dispose();
 		material.dispose();
 	});
+
+	const canvasSize = new Size();
+
+	$effect(() => {
+		setCameraAspect(camera, canvasSize.ratio);
+	});
+
+	const rendererSize = RendererSize.fromSize(canvasSize);
 </script>
 
 <canvas
-	class="aspect-square md:aspect-video"
+	bind:clientWidth={canvasSize.width}
+	bind:clientHeight={canvasSize.height}
 	{@attach controls(orbit)}
 	{@attach (canvas) => {
-		const renderer = new WebGPURenderer({
+		const renderer = new t.WebGPURenderer({
 			antialias: true,
 			canvas,
 		});
 
-		loadSpriteSheet.then((t) => {
-			t.colorSpace = renderer.currentColorSpace;
+		$effect(() => {
+			setRendererSize(renderer, rendererSize);
+		});
+
+		loadSpriteSheet.then((sheet) => {
+			sheet.colorSpace = renderer.currentColorSpace;
 		});
 
 		const setAnimationLoop = renderer.setAnimationLoop(() => {
-			if (resize(renderer)) {
-				const aspect = canvas.clientWidth / canvas.clientHeight;
-				setCameraAspect(mainCamera, aspect);
-			}
 			orbit.update();
-			renderer.render(mainScene, mainCamera);
+			renderer.render(mainScene, camera);
 		});
 
 		return () => {
