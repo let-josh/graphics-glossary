@@ -28,8 +28,6 @@
 
 	const CONSTRAINT_FACTOR = 1000;
 
-	const isMesh = (m: any): m is t.Mesh => m?.isMesh === true;
-
 	const RENDER_TARGET_CAMERA_TRANSLATION_AMOUNT = 3;
 	const CAMERA_TRANSLATION_AMOUNT = 1;
 </script>
@@ -46,6 +44,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
+	import { isMesh } from "@let-josh/three-is";
 	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
 
 	const { promise: loadGLTF, resolve: resolveGLTF } =
@@ -99,15 +98,15 @@
 		return size;
 	});
 
-	const createStream = createSize.then((size) =>
-		navigator.mediaDevices.getUserMedia({
+	const createStream = createSize.then((size) => {
+		return navigator.mediaDevices.getUserMedia({
 			video: {
 				width: Math.floor(CONSTRAINT_FACTOR * size.x),
 				height: Math.floor(CONSTRAINT_FACTOR * size.y),
 				facingMode: "user",
 			},
-		}),
-	);
+		});
+	});
 
 	const createScreenGeometry = createSize.then(
 		(size) => new t.PlaneGeometry(size?.x ?? 1, size?.y ?? 1),
@@ -161,12 +160,12 @@
 <video
 	class="hidden"
 	{@attach (video) => {
-		const videoTexture = new t.VideoTexture(video);
-		videoTexture.flipY = false;
-		videoTexture.colorSpace = t.SRGBColorSpace;
-
 		const videoSrcSet = createStream.then((stream) => {
 			const geometry = new t.BoxGeometry();
+
+			const videoTexture = new t.VideoTexture(video);
+			videoTexture.flipY = false;
+			videoTexture.colorSpace = t.SRGBColorSpace;
 			const material = new t.MeshBasicMaterial({
 				map: videoTexture,
 			});
@@ -177,12 +176,12 @@
 			video.play();
 			return () => {
 				renderTargetScene.remove(mesh);
+				videoTexture.dispose();
 				geometry.dispose();
 				material.dispose();
 
 				video.pause();
 				video.srcObject = lastSrcObject;
-				videoTexture.dispose();
 			};
 		});
 
