@@ -39,12 +39,12 @@
 	import { Size } from "@classes/Size.svelte";
 
 	import { boxFromIndexedPositionAttribute } from "@functions/boxFromIndexedPositionAttribute";
+	import { isMesh } from "@functions/isMesh";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import { isMesh } from "@let-josh/three-is";
 	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
 
 	const { promise: loadGLTF, resolve: resolveGLTF } =
@@ -57,6 +57,11 @@
 		cubeLoader.loadAsync(cubeMapFiles).then(resolveEnvironment);
 	});
 
+	const scene = new t.Scene();
+	loadGLTF.then((gltf) => {
+		scene.add(gltf.scene);
+	});
+
 	const getScreenMesh = loadGLTF.then((gltf) => {
 		const object = gltf.scene.getObjectByName(screenMeshName);
 		if (!isMesh(object)) return null;
@@ -64,21 +69,16 @@
 		return object;
 	});
 
-	const scene = new t.Scene();
-	loadGLTF.then((gltf) => {
-		scene.add(gltf.scene);
+	const createBox = getScreenMesh.then((mesh) => {
+		if (mesh === null) return mesh;
+		const index = mesh.geometry.getIndex();
+		if (index === null) return index;
+		const positionAttribute = mesh.geometry.getAttribute("position");
+		return boxFromIndexedPositionAttribute(index, positionAttribute);
 	});
 
 	loadEnvironment.then((environment) => {
 		scene.environment = scene.background = environment;
-	});
-
-	const createBox = getScreenMesh.then((mesh) => {
-		if (mesh === null) return mesh;
-		const index = mesh.geometry.getIndex() ?? null;
-		if (index === null) return index;
-		const positionAttribute = mesh.geometry.getAttribute("position");
-		return boxFromIndexedPositionAttribute(index, positionAttribute);
 	});
 
 	const axis = new t.Vector3(0, 0.5, 1).normalize();
@@ -109,7 +109,7 @@
 	});
 
 	const createScreenGeometry = createSize.then(
-		(size) => new t.PlaneGeometry(size?.x ?? 1, size?.y ?? 1),
+		(size) => new t.PlaneGeometry(size.x, size.y),
 	);
 
 	const createScreenMesh = createScreenGeometry.then(
@@ -120,8 +120,12 @@
 		mesh.position.copy(orbit.target);
 	});
 
-	createScreenMesh.then((mesh) => {
+	const addScreenMesh = createScreenMesh.then((mesh) => {
 		scene.add(mesh);
+		return (cleanup: (mesh: t.Mesh) => void) => {
+			scene.remove(mesh);
+			cleanup(mesh);
+		};
 	});
 
 	const renderTarget = new t.RenderTarget();
@@ -150,9 +154,14 @@
 
 	onCleanup(() => {
 		renderTarget.dispose();
-		createScreenMesh.then((mesh) => {
-			mesh.geometry.dispose();
-			mesh.material.dispose();
+		addScreenMesh.then((cleanup) => {
+			cleanup((mesh) => {
+				mesh.geometry.dispose();
+				const materials = Array.isArray(mesh.material)
+					? mesh.material
+					: [mesh.material];
+				for (const material of materials) material.dispose();
+			});
 		});
 	});
 </script>
