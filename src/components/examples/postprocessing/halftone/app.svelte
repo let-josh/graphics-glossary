@@ -15,7 +15,7 @@
 <script lang="ts">
 	import { halftone } from "./tsl";
 
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
@@ -84,7 +84,10 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
-	const rendererSize = RendererSize.fromSize(canvasSize);
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 </script>
 
 <div class="relative">
@@ -165,7 +168,7 @@
 			});
 
 			$effect(() => {
-				setRendererSize(renderer, rendererSize);
+				renderer.setSize(rendererSize.width, rendererSize.height, false);
 			});
 
 			const renderPipeline = new t.RenderPipeline(renderer);

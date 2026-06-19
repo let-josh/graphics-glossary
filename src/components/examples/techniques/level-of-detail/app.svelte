@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DPRSize } from "@classes/DPRSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import { onCleanup } from "@functions/onCleanup.svelte";
@@ -60,7 +60,10 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
-	const rendererSize = RendererSize.fromSize(canvasSize);
+	const rendererSize = new DPRSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 </script>
 
 <canvas
@@ -73,7 +76,7 @@
 		});
 
 		$effect(() => {
-			setRendererSize(renderer, rendererSize);
+			renderer.setSize(rendererSize.width, rendererSize.height, false);
 		});
 
 		const setAnimationLoop = renderer.setAnimationLoop((time) => {

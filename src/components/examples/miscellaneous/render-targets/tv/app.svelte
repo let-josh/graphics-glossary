@@ -35,7 +35,7 @@
 <script lang="ts">
 	import { controls } from "@attachments/controls";
 
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import { boxFromIndexedPositionAttribute } from "@functions/boxFromIndexedPositionAttribute";
@@ -142,12 +142,15 @@
 	renderTargetCamera.lookAt(renderTargetScene.position);
 
 	const canvasSize = new Size();
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 
 	$effect(() => {
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
-	const rendererSize = RendererSize.fromSize(canvasSize);
 	$effect(() => {
 		renderTarget.setSize(rendererSize.width, rendererSize.height);
 	});
@@ -214,7 +217,7 @@
 			});
 
 			$effect(() => {
-				setRendererSize(renderer, rendererSize);
+				renderer.setSize(rendererSize.width, rendererSize.height, false);
 			});
 
 			const setAnimationLoopPromise = renderer.setAnimationLoop(() => {

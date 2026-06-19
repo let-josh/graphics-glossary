@@ -22,7 +22,7 @@
 
 	import { controls } from "@attachments/controls";
 
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import { onCleanup } from "@functions/onCleanup.svelte";
@@ -89,11 +89,14 @@
 
 	const canvasSize = new Size();
 
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
+
 	$effect(() => {
 		setCameraAspect(camera, canvasSize.ratio);
 	});
-
-	const rendererSize = RendererSize.fromSize(canvasSize);
 
 	onCleanup(() => {
 		sphereMaterial.dispose();
@@ -122,7 +125,7 @@
 		});
 
 		$effect(() => {
-			setRendererSize(renderer, rendererSize);
+			renderer.setSize(rendererSize.width, rendererSize.height, false);
 		});
 
 		const setAnimationLoop = renderer.setAnimationLoop((time) => {

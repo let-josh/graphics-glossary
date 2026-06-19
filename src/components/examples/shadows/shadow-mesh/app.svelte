@@ -25,7 +25,7 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
-	import { RendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
@@ -88,7 +88,10 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
-	const rendererSize = RendererSize.fromSize(canvasSize);
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 
 	let animationLoop: null | (() => void) = null;
 

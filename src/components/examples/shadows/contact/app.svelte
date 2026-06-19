@@ -15,7 +15,7 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
@@ -94,12 +94,14 @@
 	const orbit = new OrbitControls(camera);
 
 	const canvasSize = new Size();
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 
 	$effect(() => {
 		setCameraAspect(camera, canvasSize.ratio);
 	});
-
-	const rendererSize = RendererSize.fromSize(canvasSize);
 </script>
 
 <div class="relative">
@@ -139,7 +141,7 @@
 			});
 
 			$effect(() => {
-				setRendererSize(renderer, rendererSize);
+				renderer.setSize(rendererSize.width, rendererSize.height, false);
 			});
 
 			const setAnimationLoop = renderer.setAnimationLoop(() => {

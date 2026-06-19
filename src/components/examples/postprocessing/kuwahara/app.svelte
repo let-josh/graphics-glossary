@@ -14,7 +14,7 @@
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
 
-	import { RendererSize, setRendererSize } from "@classes/RendererSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
@@ -83,7 +83,10 @@
 	const uSize = uniform(3);
 
 	const canvasSize = new Size();
-	const rendererSize = RendererSize.fromSize(canvasSize);
+	const rendererSize = new DprSize(
+		() => canvasSize.width,
+		() => canvasSize.height,
+	);
 
 	$effect(() => {
 		setCameraAspect(camera, canvasSize.ratio);
@@ -127,7 +130,7 @@
 			});
 
 			$effect(() => {
-				setRendererSize(renderer, rendererSize);
+				renderer.setSize(rendererSize.width, rendererSize.height, false);
 			});
 
 			const renderPipeline = new t.RenderPipeline(renderer);
