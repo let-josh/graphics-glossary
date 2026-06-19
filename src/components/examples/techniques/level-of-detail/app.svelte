@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-	import { DPRSize } from "@classes/DPRSize.svelte";
+	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import { onCleanup } from "@functions/onCleanup.svelte";
@@ -60,7 +60,7 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
-	const rendererSize = new DPRSize(
+	const rendererSize = new DprSize(
 		() => canvasSize.width,
 		() => canvasSize.height,
 	);
