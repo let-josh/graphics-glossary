@@ -2,14 +2,15 @@
 	lang="ts"
 	module
 >
-	import hdrUrl from "@assets/hdrs/suburban_garden_1k.hdr";
-
 	const hdrLoader = new HDRLoader();
 	const gltfLoader = new GLTFLoader();
+	setDRACOLoader(gltfLoader);
 </script>
 
 <script lang="ts">
 	import { kuwahara } from "./tsl";
+
+	import hdrUrl from "@assets/hdrs/suburban_garden_1k.hdr";
 
 	import { controls } from "@attachments/controls";
 	import { pane } from "@attachments/pane";
@@ -23,6 +24,7 @@
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
+	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
 	import {

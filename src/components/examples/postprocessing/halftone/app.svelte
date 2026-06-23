@@ -2,24 +2,25 @@
 	lang="ts"
 	module
 >
-	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
-
-	import PaneContainer from "@components/controls/PaneContainer.svelte";
-
-	import { loadAbalone } from "@functions/loadAbalone";
-
 	const gltfLoader = new GLTFLoader();
+	setDRACOLoader(gltfLoader);
 </script>
 
 <script lang="ts">
 	import { halftone } from "./tsl";
 
+	import { controls } from "@attachments/controls";
+	import { pane } from "@attachments/pane";
+
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
+	import PaneContainer from "@components/controls/PaneContainer.svelte";
+
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
+	import { loadAbalone } from "@functions/loadAbalone";
 	import { setCameraAspect } from "@functions/setCameraAspect";
+	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
 	import {

@@ -3,6 +3,7 @@
 	lang="ts"
 >
 	const gltfLoader = new GLTFLoader();
+	setDRACOLoader(gltfLoader);
 	const hdrLoader = new HDRLoader();
 </script>
 
@@ -23,6 +24,7 @@
 	import { loadAbalone } from "@functions/loadAbalone";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
+	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
 	import {
@@ -50,16 +52,16 @@
 	const scene = new t.Scene();
 
 	const camera = new t.PerspectiveCamera();
-	loadAbalone(gltfLoader).then((gltf) => {
-		fitCameraToObject(camera, gltf.scene);
-		scene.add(gltf.scene);
-	});
 
 	const { promise: loadHDR, resolve: resolveHDR } =
 		Promise.withResolvers<t.Texture>();
 
 	$effect(() => {
 		hdrLoader.loadAsync(hdrUrl).then(resolveHDR);
+		loadAbalone(gltfLoader).then((gltf) => {
+			fitCameraToObject(camera, gltf.scene);
+			scene.add(gltf.scene);
+		});
 	});
 
 	const createPMREMNode = loadHDR.then((hdr) => pmremTexture(hdr));
@@ -84,6 +86,7 @@
 	});
 
 	const orbit = new OrbitControls(camera);
+	orbit.autoRotate = true;
 
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
@@ -148,10 +151,15 @@
 		class="absolute top-2 right-2"
 		{@attach pane(
 			{
-				title: "uniforms",
+				title: "controls",
+				expanded: false,
 			},
 			(pane) => {
-				pane.addBinding(glyphSize, "value", {
+				pane.addBinding(orbit, "autoRotate", {
+					label: "rotate",
+				});
+				const uniformsFolder = pane.addFolder({ title: "uniforms" });
+				uniformsFolder.addBinding(glyphSize, "value", {
 					label: "glyph size",
 					options: glyphSizes,
 				});
