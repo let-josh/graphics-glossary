@@ -20,7 +20,6 @@
 	import carURL from "@assets/gltfs/car.glb";
 
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -37,6 +36,7 @@
 	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
 	import type { GLTF } from "three/examples/jsm/Addons.js";
 	import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
+	import { Pane } from "tweakpane";
 
 	const camera = new t.PerspectiveCamera();
 	const orbit = new OrbitControls(camera);
@@ -157,39 +157,39 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				pane.addBinding(orbit, "autoRotate", {
-					label: "auto rotate",
+			});
+
+			pane.addBinding(orbit, "autoRotate", {
+				label: "auto rotate",
+			});
+
+			const uniformsFolder = pane.addFolder({
+				title: "uniforms",
+			});
+
+			uniformsFolder
+				.addBinding(retro, "value", {
+					label: "retro",
+				})
+				.on("change", (e) => {
+					affineBinding.disabled = !e.value;
 				});
 
-				const uniformsFolder = pane.addFolder({
-					title: "uniforms",
-				});
-
-				uniformsFolder
-					.addBinding(retro, "value", {
-						label: "retro",
-					})
-					.on("change", (e) => {
-						affineBinding.disabled = !e.value;
-					});
-
-				const affineBinding = uniformsFolder.addBinding(
-					affineDistortion,
-					"value",
-					{
-						label: "affine",
-						min: 0,
-						max: 1,
-						step: 0.1,
-					},
-				);
-			},
-		)}
+			const affineBinding = uniformsFolder.addBinding(
+				affineDistortion,
+				"value",
+				{
+					label: "affine",
+					min: 0,
+					max: 1,
+					step: 0.1,
+				},
+			);
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

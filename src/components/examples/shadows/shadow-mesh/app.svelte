@@ -23,7 +23,6 @@
 
 <script lang="ts">
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -37,6 +36,7 @@
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { ShadowMesh } from "three/examples/jsm/objects/ShadowMesh.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
+	import { Pane } from "tweakpane";
 
 	let rotateMesh = $state(true);
 
@@ -110,26 +110,26 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				pane
-					.addBinding(
-						{
-							rotateMesh: true,
-						},
-						"rotateMesh",
-						{
-							label: "rotate",
-						},
-					)
-					.on("change", (e) => {
-						rotateMesh = e.value;
-					});
-			},
-		)}
+			});
+
+			pane
+				.addBinding(
+					{
+						rotateMesh: true,
+					},
+					"rotateMesh",
+					{
+						label: "rotate",
+					},
+				)
+				.on("change", (e) => {
+					rotateMesh = e.value;
+				});
+		}}
 	/>
 	<canvas
 		class="aspect-square md:aspect-video"

@@ -14,7 +14,6 @@
 
 <script lang="ts">
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -28,6 +27,7 @@
 	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 	import { normalWorld, positionWorldDirection, uniform } from "three/tsl";
+	import { Pane } from "tweakpane";
 
 	const baseColorUniform = uniform(new t.Color("#583583"));
 	const fresnelColorUniform = uniform(new t.Color("#ccccaa"));
@@ -79,35 +79,35 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				pane
-					.addBinding(colors, "base", {
-						label: "base color",
-					})
-					.on("change", (e) => {
-						baseColorUniform.value.set(e.value);
-					});
+			});
 
-				pane
-					.addBinding(colors, "fresnel", {
-						label: "fresnel color",
-					})
-					.on("change", (e) => {
-						fresnelColorUniform.value.set(e.value);
-					});
-
-				pane.addBinding(powerUniform, "value", {
-					label: "power",
-					min: POWER_MIN,
-					max: POWER_MAX,
-					step: POWER_STEP,
+			pane
+				.addBinding(colors, "base", {
+					label: "base color",
+				})
+				.on("change", (e) => {
+					baseColorUniform.value.set(e.value);
 				});
-			},
-		)}
+
+			pane
+				.addBinding(colors, "fresnel", {
+					label: "fresnel color",
+				})
+				.on("change", (e) => {
+					fresnelColorUniform.value.set(e.value);
+				});
+
+			pane.addBinding(powerUniform, "value", {
+				label: "power",
+				min: POWER_MIN,
+				max: POWER_MAX,
+				step: POWER_STEP,
+			});
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

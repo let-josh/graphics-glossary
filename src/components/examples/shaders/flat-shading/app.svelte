@@ -12,7 +12,6 @@
 
 <script lang="ts">
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -25,6 +24,7 @@
 
 	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+	import { Pane } from "tweakpane";
 
 	const geometry = new t.SphereGeometry();
 
@@ -88,43 +88,43 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				const materialFolder = pane.addFolder({
-					title: "material",
+			});
+
+			const materialFolder = pane.addFolder({
+				title: "material",
+			});
+
+			materialFolder
+				.addBinding(
+					{
+						color: `#${material.color.getHexString()}`,
+					},
+					"color",
+				)
+				.on("change", (e) => {
+					flatShadingMaterial.color.copy(material.color.set(e.value));
 				});
 
-				materialFolder
-					.addBinding(
-						{
-							color: `#${material.color.getHexString()}`,
-						},
-						"color",
-					)
-					.on("change", (e) => {
-						flatShadingMaterial.color.copy(material.color.set(e.value));
-					});
+			const sceneFolder = pane.addFolder({
+				title: "scene",
+			});
 
-				const sceneFolder = pane.addFolder({
-					title: "scene",
+			sceneFolder.addBinding(helper, "visible", {
+				label: "show light helper",
+			});
+
+			sceneFolder
+				.addBinding(flatShadingMesh, "visible", {
+					label: "flat shading",
+				})
+				.on("change", (e) => {
+					mesh.visible = !e.value;
 				});
-
-				sceneFolder.addBinding(helper, "visible", {
-					label: "show light helper",
-				});
-
-				sceneFolder
-					.addBinding(flatShadingMesh, "visible", {
-						label: "flat shading",
-					})
-					.on("change", (e) => {
-						mesh.visible = !e.value;
-					});
-			},
-		)}
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

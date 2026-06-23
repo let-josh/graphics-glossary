@@ -13,7 +13,6 @@
 
 <script lang="ts">
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -28,6 +27,7 @@
 	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import { depth, texture, uniform, vec3 } from "three/tsl";
+	import { Pane } from "tweakpane";
 
 	const uDarkness = uniform(1);
 	const uShadowOpacity = uniform(1);
@@ -107,7 +107,12 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane({ title: "uniforms" }, (pane) => {
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
+				title: "uniforms",
+			});
+
 			pane.addBinding(uDarkness, "value", {
 				label: "darkness",
 				min: 0,
@@ -128,7 +133,7 @@
 				max: 5,
 				step: 0.5,
 			});
-		})}
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

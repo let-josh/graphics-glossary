@@ -13,7 +13,6 @@
 	import hdrUrl from "@assets/hdrs/suburban_garden_1k.hdr";
 
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -41,6 +40,7 @@
 		texture,
 		uniform,
 	} from "three/tsl";
+	import { Pane } from "tweakpane";
 
 	const scene = new t.Scene();
 
@@ -98,28 +98,31 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
+			});
 
-			(pane) => {
-				pane.addBinding(orbit, "autoRotate", {
-					label: "rotate",
-				});
+			pane.addBinding(orbit, "autoRotate", {
+				label: "rotate",
+			});
 
-				const uniformsFolder = pane.addFolder({
-					title: "uniforms",
-				});
+			const uniformsFolder = pane.addFolder({
+				title: "uniforms",
+			});
 
-				uniformsFolder.addBinding(uSize, "value", {
-					min: 1,
-					max: 5,
-					step: 1,
-					label: "size",
-				});
-			},
-		)}
+			uniformsFolder.addBinding(uSize, "value", {
+				min: 1,
+				max: 5,
+				step: 1,
+				label: "size",
+			});
+
+			return () => {
+				pane.dispose();
+			};
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

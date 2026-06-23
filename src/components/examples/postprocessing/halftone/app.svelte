@@ -10,7 +10,6 @@
 	import { halftone } from "./tsl";
 
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -94,69 +93,69 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				pane.addBinding(orbit, "autoRotate", {
-					label: "rotate",
-				});
-				pane
-					.addBinding(background, "value", {
-						label: "background",
-					})
-					.on("change", (e) => {
-						if (!e.last) backgroundColor.setStyle(e.value);
-					});
+			});
 
-				const uniformsFolder = pane.addFolder({
-					expanded: false,
-					title: "uniforms",
+			pane.addBinding(orbit, "autoRotate", {
+				label: "rotate",
+			});
+			pane
+				.addBinding(background, "value", {
+					label: "background",
+				})
+				.on("change", (e) => {
+					if (!e.last) backgroundColor.setStyle(e.value);
 				});
 
-				uniformsFolder.addBinding(enabled, "value", {
-					label: "enabled",
+			const uniformsFolder = pane.addFolder({
+				expanded: false,
+				title: "uniforms",
+			});
+
+			uniformsFolder.addBinding(enabled, "value", {
+				label: "enabled",
+			});
+
+			uniformsFolder.addBinding(size, "value", {
+				label: "size",
+				options: {
+					"4": 4,
+					"8": 8,
+					"16": 16,
+					"32": 32,
+				},
+			});
+
+			uniformsFolder.addBinding(spacing, "value", {
+				label: "spacing",
+				max: 0.5,
+				min: 0.1,
+				step: 0.1,
+			});
+
+			for (const [title, key] of colorLabelsAndKeys) {
+				const folder = uniformsFolder.addFolder({
+					title,
 				});
 
-				uniformsFolder.addBinding(size, "value", {
-					label: "size",
-					options: {
-						"4": 4,
-						"8": 8,
-						"16": 16,
-						"32": 32,
-					},
-				});
-
-				uniformsFolder.addBinding(spacing, "value", {
-					label: "spacing",
-					max: 0.5,
-					min: 0.1,
+				folder.addBinding(strengths.value, key, {
+					label: "strength",
+					min: 0,
+					max: 1,
 					step: 0.1,
 				});
 
-				for (const [title, key] of colorLabelsAndKeys) {
-					const folder = uniformsFolder.addFolder({
-						title,
-					});
-
-					folder.addBinding(strengths.value, key, {
-						label: "strength",
-						min: 0,
-						max: 1,
-						step: 0.1,
-					});
-
-					folder.addBinding(degrees.value, key, {
-						label: "degrees",
-						min: 0,
-						max: 90,
-						step: 1,
-					});
-				}
-			},
-		)}
+				folder.addBinding(degrees.value, key, {
+					label: "degrees",
+					min: 0,
+					max: 90,
+					step: 1,
+				});
+			}
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}

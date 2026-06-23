@@ -2,17 +2,16 @@
 	module
 	lang="ts"
 >
-	const colorAttributeTransformMatrix = new Matrix4().makeTranslation(
-		new Vector3().setScalar(0.5),
+	const colorAttributeTransformMatrix = new t.Matrix4().makeTranslation(
+		new t.Vector3().setScalar(0.5),
 	);
 
-	const CAMERA_TRANSLATION_AXIS = new Vector3(1, 1, 1).normalize();
+	const CAMERA_TRANSLATION_AXIS = new t.Vector3(1, 1, 1).normalize();
 	const CAMERA_TRANSLATION_AMOUNT = 3;
 </script>
 
 <script lang="ts">
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -22,18 +21,11 @@
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
+	import * as t from "three/webgpu";
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import {
-		BoxGeometry,
-		Matrix4,
-		Mesh,
-		MeshBasicMaterial,
-		PerspectiveCamera,
-		Vector3,
-		WebGPURenderer,
-	} from "three/webgpu";
+	import { Pane } from "tweakpane";
 
-	const geometry = new BoxGeometry();
+	const geometry = new t.BoxGeometry();
 	geometry.setAttribute(
 		"color",
 		geometry
@@ -42,13 +34,13 @@
 			.applyMatrix4(colorAttributeTransformMatrix),
 	);
 
-	const material = new MeshBasicMaterial({
+	const material = new t.MeshBasicMaterial({
 		vertexColors: true,
 	});
 
-	const mesh = new Mesh(geometry, material);
+	const mesh = new t.Mesh(geometry, material);
 
-	const camera = new PerspectiveCamera().translateOnAxis(
+	const camera = new t.PerspectiveCamera().translateOnAxis(
 		CAMERA_TRANSLATION_AXIS,
 		CAMERA_TRANSLATION_AMOUNT,
 	);
@@ -75,20 +67,20 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				title: "controls",
-			},
-			(pane) => {
-				pane
-					.addBinding(material, "vertexColors", {
-						label: "vertex colors",
-					})
-					.on("change", () => {
-						material.needsUpdate = true;
-					});
-			},
-		)}
+			});
+
+			pane
+				.addBinding(material, "vertexColors", {
+					label: "vertex colors",
+				})
+				.on("change", () => {
+					material.needsUpdate = true;
+				});
+		}}
 	/>
 
 	<canvas
@@ -96,7 +88,7 @@
 		bind:clientHeight={canvasSize.height}
 		{@attach controls(orbit)}
 		{@attach (canvas) => {
-			const renderer = new WebGPURenderer({
+			const renderer = new t.WebGPURenderer({
 				antialias: true,
 				canvas,
 			});

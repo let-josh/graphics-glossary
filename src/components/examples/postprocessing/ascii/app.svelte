@@ -13,7 +13,6 @@
 	import hdrUrl from "@assets/hdrs/glasshouse_interior_1k.hdr";
 
 	import { controls } from "@attachments/controls";
-	import { pane } from "@attachments/pane";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
@@ -41,6 +40,7 @@
 		texture,
 		uniform,
 	} from "three/tsl";
+	import { Pane } from "tweakpane";
 
 	// const chars = " %@";
 	const chars = " .:-=+*#%@";
@@ -149,22 +149,22 @@
 <div class="relative">
 	<PaneContainer
 		class="absolute top-2 right-2"
-		{@attach pane(
-			{
-				title: "controls",
+		{@attach (container) => {
+			const pane = new Pane({
+				container,
 				expanded: false,
-			},
-			(pane) => {
-				pane.addBinding(orbit, "autoRotate", {
-					label: "rotate",
-				});
-				const uniformsFolder = pane.addFolder({ title: "uniforms" });
-				uniformsFolder.addBinding(glyphSize, "value", {
-					label: "glyph size",
-					options: glyphSizes,
-				});
-			},
-		)}
+				title: "controls",
+			});
+
+			pane.addBinding(orbit, "autoRotate", {
+				label: "rotate",
+			});
+			const uniformsFolder = pane.addFolder({ title: "uniforms" });
+			uniformsFolder.addBinding(glyphSize, "value", {
+				label: "glyph size",
+				options: glyphSizes,
+			});
+		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}
