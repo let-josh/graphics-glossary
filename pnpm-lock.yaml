@@ -20,9 +20,6 @@ importers:
       '@astrojs/svelte':
         specifier: ^9.0.0
         version: 9.0.0(@types/node@24.13.2)(astro@7.0.2(@astrojs/markdown-remark@7.2.0)(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.1)(@types/node@24.13.2)(jiti@2.7.0)(rollup@4.62.0))(esbuild@0.28.1)(jiti@2.7.0)(svelte@5.56.3)(typescript@6.0.3)
-      '@let-josh/three-is':
-        specifier: ^0.0.10
-        version: 0.0.10(three@0.184.0)
       '@tailwindcss/vite':
         specifier: ^4.3.0
         version: 4.3.1(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0))
@@ -646,11 +643,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@let-josh/three-is@0.0.10':
-    resolution: {integrity: sha512-+PGbkhs2vlqjxt6dEL12YQ3Vt8vcx7KsSx+Dmc9TMVa8SgkTTvs0TM6hJ5jTkNi1QThiNDhoCNBVUGl1SgevvQ==}
-    peerDependencies:
-      three: '*'
 
   '@mdx-js/mdx@3.1.1':
     resolution: {integrity: sha512-f6ZO2ifpwAQIpzGWaBQT2TXxPv6z3RBzQKpVftEWN78Vl/YweF1uwussDx8ECAXVtr3Rs89fKyG9YlzUs9DyGQ==}
@@ -3125,10 +3117,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
-
-  '@let-josh/three-is@0.0.10(three@0.184.0)':
-    dependencies:
-      three: 0.184.0
 
   '@mdx-js/mdx@3.1.1':
     dependencies:
