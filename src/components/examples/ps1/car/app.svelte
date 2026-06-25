@@ -48,8 +48,6 @@
 		.translateOnAxis(axis, 7.5);
 	camera.lookAt(radius, 0, 0);
 
-	// const orbit = new OrbitControls(camera);
-
 	const {
 		promise: loadCars,
 		resolve: resolveCars,
@@ -121,7 +119,7 @@
 		const material = new t.MeshBasicMaterial({
 			map,
 		});
-		const floor = new t.Mesh(new t.PlaneGeometry(1, 1, 1, 1), material).rotateX(
+		const floor = new t.Mesh(new t.PlaneGeometry(), material).rotateX(
 			-Math.PI / 2,
 		);
 		floor.scale.multiplyScalar(100);
@@ -180,7 +178,6 @@
 	<canvas
 		bind:clientWidth={canvasSize.width}
 		bind:clientHeight={canvasSize.height}
-		class="aspect-square md:aspect-video"
 		{@attach (canvas) => {
 			const renderer = new t.WebGPURenderer({
 				canvas,
