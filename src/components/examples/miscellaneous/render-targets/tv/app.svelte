@@ -8,7 +8,7 @@
 	import posx from "@assets/cubemaps/Lycksele/posx.jpg";
 	import posy from "@assets/cubemaps/Lycksele/posy.jpg";
 	import posz from "@assets/cubemaps/Lycksele/posz.jpg";
-	import tvGltfUrl from "@assets/gltfs/kenney/tv.glb";
+	import tvGltfUrl from "@assets/gltfs/tv.glb";
 
 	const cubeLoader = new t.CubeTextureLoader();
 
