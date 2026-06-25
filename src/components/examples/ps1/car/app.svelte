@@ -2,8 +2,6 @@
 	const gltfLoader = new GLTFLoader();
 	setDRACOLoader(gltfLoader);
 
-	const meshName = "Car2";
-
 	const dither = tsl.Fn(() => {
 		const uv = tsl.uvec2(tsl.screenCoordinate).mod(4);
 		return tsl
@@ -14,130 +12,86 @@
 			)
 			.element(uv.y.mul(4).add(uv.x));
 	});
+
+	const textureLoader = new t.TextureLoader();
 </script>
 
 <script lang="ts">
-	import carURL from "@assets/gltfs/car.glb";
-
-	import { controls } from "@attachments/controls";
+	import floorTextureUrl from "@assets/128x128/Misc/Synth-Misc_03-128x128.png";
+	import hatchbackUrl from "@assets/gltfs/cars/hatchback.glb";
+	import minivanUrl from "@assets/gltfs/cars/minivan.glb";
+	import oldUrl from "@assets/gltfs/cars/old.glb";
+	import saloonUrl from "@assets/gltfs/cars/saloon.glb";
+	import sedanUrl from "@assets/gltfs/cars/sedan.glb";
+	import stationWagonUrl from "@assets/gltfs/cars/station-wagon.glb";
+	import stepvanUrl from "@assets/gltfs/cars/stepvan.glb";
 
 	import { DprSize } from "@classes/DprSize.svelte";
 	import { Size } from "@classes/Size.svelte";
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
-	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { isMesh } from "@functions/isMesh";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as tsl from "three/tsl";
 	import * as t from "three/webgpu";
-	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
+	import { GLTFLoader } from "three/examples/jsm/Addons.js";
 	import type { GLTF } from "three/examples/jsm/Addons.js";
 	import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
 	import { Pane } from "tweakpane";
 
-	const camera = new t.PerspectiveCamera();
-	const orbit = new OrbitControls(camera);
-	orbit.autoRotate = true;
+	const radius = 10;
+	const axis = new t.Vector3(1.5, 0.25, -1).normalize();
+	const camera = new t.PerspectiveCamera(60, 1, 1, 50)
+		.translateX(radius)
+		.translateOnAxis(axis, 7.5);
+	camera.lookAt(radius, 0, 0);
+
+	// const orbit = new OrbitControls(camera);
 
 	const {
-		promise: loadCarGLTF,
-		resolve: resolveCarPromise,
-	}: PromiseWithResolvers<GLTF> = Promise.withResolvers();
+		promise: loadCars,
+		resolve: resolveCars,
+	}: PromiseWithResolvers<GLTF[]> = Promise.withResolvers();
+
+	const {
+		promise: loadFloorTexture,
+		resolve: resolveFloorTexture,
+	}: PromiseWithResolvers<t.Texture> = Promise.withResolvers();
+
+	const light = new t.AmbientLight("white", 5);
+	const scene = new t.Scene().add(light);
+	const urls = [
+		hatchbackUrl,
+		minivanUrl,
+		oldUrl,
+		saloonUrl,
+		sedanUrl,
+		stationWagonUrl,
+		stepvanUrl,
+	] as const;
 
 	$effect(() => {
-		gltfLoader.loadAsync(carURL).then(resolveCarPromise);
-
-		const size = 256;
-		const oss = new OffscreenCanvas(size, size);
-		const context = oss.getContext("2d");
-		if (context === null) throw new Error("context is null");
-
-		const halfSize = size / 2;
-
-		const gradient = context.createRadialGradient(
-			halfSize,
-			halfSize,
-			0,
-			halfSize,
-			halfSize,
-			Math.hypot(halfSize, halfSize),
-		);
-
-		gradient.addColorStop(0, "orange");
-		gradient.addColorStop(1, "purple");
-
-		context.fillStyle = gradient;
-		context.fillRect(0, 0, size, size);
-
-		const map = new t.CanvasTexture(oss);
-		map.minFilter = map.magFilter = t.NearestFilter;
-		map.generateMipmaps = false;
-		const lastBackground = scene.background;
-		scene.background = map;
-		return () => {
-			scene.background = lastBackground;
-			map.dispose();
-		};
+		Promise.all(urls.map((url) => gltfLoader.loadAsync(url))).then(resolveCars);
+		textureLoader.loadAsync(floorTextureUrl.src).then(resolveFloorTexture);
 	});
 
-	const getCarMesh = loadCarGLTF.then((o) => {
-		const mesh = o.scene.getObjectByName(meshName);
-		if (isMesh(mesh)) return mesh;
-		return null;
-	});
-
-	const lightDirection = new t.Vector3(1, 1, 1).normalize();
-
-	const scene = new t.Scene();
-	getCarMesh.then((car) => {
-		if (car === null) return car;
-
-		const material:
-			| (t.Material & {
-					map?: t.Texture;
-			  })
-			| null = Array.isArray(car.material)
-			? (car.material[0] ?? null)
-			: car.material;
-		// const material = materials[0] ?? null;
-
-		if (material === null) return;
-
-		const map = material.map ?? null;
-		if (map === null) return;
-
-		map.magFilter = map.minFilter = t.NearestFilter;
-		map.generateMipmaps = false;
-		car.material = new t.MeshBasicMaterial({
-			map,
-			vertexColors: true,
-		});
-		material.dispose();
-
-		car.geometry.center();
-
-		const normals = car.geometry.getAttribute("normal");
-		const v = new t.Vector3();
-		const colors: number[] = [];
-		for (let i = 0; i < normals.count; i += 1) {
-			v.fromBufferAttribute(normals, i);
-			const dot = 0.5 * (1 + v.dot(lightDirection)); // -1 -> 1
-
-			colors.push(dot, dot, dot);
+	const group = new t.Group();
+	scene.add(group);
+	loadCars.then((cars) => {
+		const a = (2 * Math.PI) / cars.length;
+		let i = 0;
+		for (const car of cars) {
+			const angle = a * i;
+			car.scene.position.x = radius * Math.cos(angle);
+			car.scene.position.z = radius * Math.sin(angle);
+			car.scene.lookAt(scene.position);
+			car.scene.rotateY(Math.PI);
+			group.add(car.scene);
+			i += 1;
 		}
-		const attribute = new t.Float32BufferAttribute(colors, 3);
-		car.geometry.setAttribute("color", attribute);
-
-		fitCameraToObject(camera, car);
-		scene.add(car);
 	});
-
-	const arrow = new t.ArrowHelper(lightDirection);
-	arrow.scale.multiplyScalar(5);
-	scene.add(arrow);
 
 	const retro = tsl.uniform(true);
 
@@ -151,7 +105,34 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
+	scene.fogNode = tsl.fog(
+		tsl.color("#ffffff"),
+		tsl.rangeFogFactor(camera.near, camera.far),
+	);
+
+	scene.backgroundNode = tsl.screenUV.y.mix(
+		tsl.color("orange"),
+		tsl.color("purple"),
+	);
+
+	loadFloorTexture.then((map) => {
+		map.wrapS = map.wrapT = t.RepeatWrapping;
+
+		const material = new t.MeshBasicMaterial({
+			map,
+		});
+		const floor = new t.Mesh(new t.PlaneGeometry(1, 1, 1, 1), material).rotateX(
+			-Math.PI / 2,
+		);
+		floor.scale.multiplyScalar(100);
+		scene.add(floor);
+	});
+
 	const affineDistortion = tsl.uniform(1);
+	const ditherEnabled = tsl.uniform(true);
+	const bits = tsl.uniform(5);
+
+	const rotate = { value: true };
 </script>
 
 <div class="relative">
@@ -163,39 +144,43 @@
 				title: "controls",
 			});
 
-			pane.addBinding(orbit, "autoRotate", {
-				label: "auto rotate",
+			pane.addBinding(rotate, "value", {
+				label: "rotate",
 			});
 
-			const uniformsFolder = pane.addFolder({
-				title: "uniforms",
-			});
-
-			uniformsFolder
+			pane
 				.addBinding(retro, "value", {
 					label: "retro",
 				})
 				.on("change", (e) => {
-					affineBinding.disabled = !e.value;
+					uniformsFolder.disabled = !e.value;
 				});
 
-			const affineBinding = uniformsFolder.addBinding(
-				affineDistortion,
-				"value",
-				{
-					label: "affine",
-					min: 0,
-					max: 1,
-					step: 0.1,
-				},
-			);
+			const uniformsFolder = pane.addFolder({ title: "uniforms" });
+
+			uniformsFolder.addBinding(affineDistortion, "value", {
+				label: "affine",
+				min: 0,
+				max: 1,
+				step: 0.1,
+			});
+
+			uniformsFolder.addBinding(ditherEnabled, "value", {
+				label: "dither",
+			});
+
+			uniformsFolder.addBinding(bits, "value", {
+				label: "bits per color channel",
+				min: 2,
+				max: 8,
+				step: 1,
+			});
 		}}
 	/>
 	<canvas
 		bind:clientWidth={canvasSize.width}
 		bind:clientHeight={canvasSize.height}
 		class="aspect-square md:aspect-video"
-		{@attach controls(orbit)}
 		{@attach (canvas) => {
 			const renderer = new t.WebGPURenderer({
 				canvas,
@@ -214,25 +199,23 @@
 						affineDistortion,
 					});
 
-					const up = 255;
-					const bits = 5;
-					const down = Math.ceil(up / 2 ** bits);
+					const up = tsl.float(255);
+					const down = up.div(tsl.float(2).pow(bits)).ceil();
 					const posterized = color.rgb
 						.mul(up)
-						.add(dither())
+						.add(tsl.select(ditherEnabled, dither(), tsl.float(0)))
 						.clamp(0, up)
 						.div(down)
 						.floor()
-						.div(Math.floor(up / down));
+						.div(up.div(down).floor());
 					return tsl.vec4(posterized, color.a);
 				})(),
 				tsl.pass(scene, camera),
 			);
 
-			// pipeline = tsl.posterize(pipeline, tsl.float(32));
 			renderPipeline.outputNode = pipeline;
 			const setAnimationLoop = renderer.setAnimationLoop(() => {
-				if (orbit.autoRotate) orbit.update();
+				if (rotate.value) group.rotateY(Math.PI / 900);
 				renderPipeline.render();
 			});
 
