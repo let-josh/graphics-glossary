@@ -31,6 +31,7 @@
 
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
+	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
@@ -103,34 +104,53 @@
 		setCameraAspect(camera, canvasSize.ratio);
 	});
 
+	const fogColor = tsl.color("orange");
+
 	scene.fogNode = tsl.fog(
-		tsl.color("#ffffff"),
+		fogColor,
 		tsl.rangeFogFactor(camera.near, camera.far),
 	);
 
-	scene.backgroundNode = tsl.screenUV.y.mix(
-		tsl.color("orange"),
-		tsl.color("purple"),
-	);
+	scene.backgroundNode = tsl.screenUV.y.mix(fogColor, tsl.color("purple"));
 
-	loadFloorTexture.then((map) => {
+	const createFloor = loadFloorTexture.then((map) => {
 		map.wrapS = map.wrapT = t.RepeatWrapping;
 
 		const material = new t.MeshBasicMaterial({
 			map,
 		});
-		const floor = new t.Mesh(new t.PlaneGeometry(), material).rotateX(
-			-Math.PI / 2,
-		);
-		floor.scale.multiplyScalar(100);
+		const geometry = new t.PlaneGeometry();
+
+		const floor = new t.Mesh(geometry, material).rotateX(-Math.PI / 2);
+		floor.scale.setScalar(100);
+		return floor;
+	});
+
+	const addFloor = createFloor.then((floor) => {
 		scene.add(floor);
+		return () => {
+			scene.remove(floor);
+			floor.geometry.dispose();
+			const map = floor.material.map;
+			floor.material.map = null;
+			map?.dispose();
+			floor.material.dispose();
+		};
+	});
+
+	onCleanup(() => {
+		addFloor.then((removeFloor) => {
+			removeFloor();
+		});
 	});
 
 	const affineDistortion = tsl.uniform(1);
 	const ditherEnabled = tsl.uniform(true);
 	const bits = tsl.uniform(5);
 
-	const rotate = { value: true };
+	const rotate = {
+		value: true,
+	};
 </script>
 
 <div class="relative">
