@@ -27,7 +27,7 @@
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { loadAbalone } from "@functions/loadAbalone";
+	import { loadAvocado } from "@functions/loadAvocado";
 	import { onCleanup } from "@functions/onCleanup.svelte";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
@@ -47,15 +47,20 @@
 
 	const scene = new t.Scene();
 
-	const camera = new t.PerspectiveCamera();
+	const camera = new t.PerspectiveCamera(60, 1, 0.01, 1);
 
 	const { promise: loadHDR, resolve: resolveHDR } =
 		Promise.withResolvers<t.Texture>();
 
 	$effect(() => {
 		hdrLoader.loadAsync(hdrUrl).then(resolveHDR);
-		loadAbalone(gltfLoader).then((gltf) => {
-			fitCameraToObject(camera, gltf.scene);
+		loadAvocado(gltfLoader).then((gltf) => {
+			const box = new t.Box3();
+			fitCameraToObject(camera, gltf.scene, {
+				box,
+				fudge: 2,
+			});
+			box.getCenter(orbit.target);
 			scene.add(gltf.scene);
 		});
 	});

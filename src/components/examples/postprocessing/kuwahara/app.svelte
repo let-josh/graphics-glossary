@@ -20,8 +20,8 @@
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { loadAbalone } from "@functions/loadAbalone";
-	import { onCleanup } from "@functions/onCleanup.svelte";
+	import { isMesh } from "@functions/isMesh";
+	import { loadAvocado } from "@functions/loadAvocado";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
@@ -40,37 +40,38 @@
 
 	const scene = new t.Scene();
 
-	const { promise: loadEnvironment, resolve: resolveEnvironment } =
-		Promise.withResolvers<t.DataTexture>();
-
 	$effect(() => {
-		hdrLoader.loadAsync(hdrUrl).then(resolveEnvironment);
-		loadAbalone(gltfLoader).then((gltf) => {
-			fitCameraToObject(camera, gltf.scene);
+		const setEnvironment = hdrLoader.loadAsync(hdrUrl).then((hdr) => {
+			const lastBackground = scene.backgroundNode;
+			const lastEnvironment = scene.environmentNode;
+
+			const environment = pmremTexture(hdr);
+			scene.backgroundNode = scene.environmentNode = environment.rgb;
+			return () => {
+				scene.backgroundNode = lastBackground;
+				scene.environmentNode = lastEnvironment;
+				environment.value.dispose();
+			};
+		});
+
+		loadAvocado(gltfLoader).then((gltf) => {
+			const box = new t.Box3();
+			fitCameraToObject(camera, gltf.scene, {
+				box,
+				fudge: 2,
+			});
+			box.getCenter(orbit.target);
 			scene.add(gltf.scene);
 		});
-	});
 
-	const setEnvironment = loadEnvironment.then((hdr) => {
-		const lastBackground = scene.backgroundNode;
-		const lastEnvironment = scene.environmentNode;
-
-		const environment = pmremTexture(hdr);
-		scene.backgroundNode = scene.environmentNode = environment.rgb;
 		return () => {
-			scene.backgroundNode = lastBackground;
-			scene.environmentNode = lastEnvironment;
-			environment.value.dispose();
+			setEnvironment.then((cleanup) => {
+				cleanup();
+			});
 		};
 	});
 
-	onCleanup(() => {
-		setEnvironment.then((cleanup) => {
-			cleanup();
-		});
-	});
-
-	const camera = new t.PerspectiveCamera();
+	const camera = new t.PerspectiveCamera(60, 1, 0.01, 1);
 
 	const orbit = new OrbitControls(camera);
 	orbit.autoRotate = true;

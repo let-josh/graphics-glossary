@@ -17,7 +17,7 @@
 	import PaneContainer from "@components/controls/PaneContainer.svelte";
 
 	import { fitCameraToObject } from "@functions/fitCameraToObject";
-	import { loadAbalone } from "@functions/loadAbalone";
+	import { loadAvocado } from "@functions/loadAvocado";
 	import { setCameraAspect } from "@functions/setCameraAspect";
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
@@ -33,6 +33,7 @@
 		texture,
 		uniform,
 	} from "three/tsl";
+	import { Pane } from "tweakpane";
 
 	const scene = new t.Scene();
 	const background = {
@@ -41,14 +42,19 @@
 	const backgroundColor = new t.Color(background.value);
 	scene.background = backgroundColor;
 
-	const camera = new t.PerspectiveCamera();
+	const camera = new t.PerspectiveCamera(60, 1, 0.01, 1);
 
 	const scenePass = pass(scene, camera);
 	const tex = scenePass.getTextureNode();
 
 	$effect(() => {
-		loadAbalone(gltfLoader).then((gltf) => {
-			fitCameraToObject(camera, gltf.scene);
+		loadAvocado(gltfLoader).then((gltf) => {
+			const box = new t.Box3();
+			fitCameraToObject(camera, gltf.scene, {
+				box,
+				fudge: 2,
+			});
+			box.getCenter(orbit.target);
 			scene.add(gltf.scene);
 		});
 	});
