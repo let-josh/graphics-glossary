@@ -24,7 +24,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { HDRLoader, OrbitControls } from "three/examples/jsm/Addons.js";
+	import { HDRLoader, OrbitControls } from "three/addons";
 
 	const camera = new t.PerspectiveCamera().translateOnAxis(
 		CAMERA_TRANSLATION_AXIS,

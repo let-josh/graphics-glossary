@@ -25,8 +25,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+	import { GLTFLoader, OrbitControls } from "three/addons";
 
 	const scene = new t.Scene();
 	$effect(() => {

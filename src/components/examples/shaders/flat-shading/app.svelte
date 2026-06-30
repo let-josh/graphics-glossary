@@ -23,7 +23,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+	import { OrbitControls } from "three/addons";
 	import { Pane } from "tweakpane";
 
 	const geometry = new t.SphereGeometry();

@@ -26,11 +26,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import {
-		GLTFLoader,
-		HDRLoader,
-		OrbitControls,
-	} from "three/examples/jsm/Addons.js";
+	import { GLTFLoader, HDRLoader, OrbitControls } from "three/addons";
 	import {
 		mix,
 		pass,

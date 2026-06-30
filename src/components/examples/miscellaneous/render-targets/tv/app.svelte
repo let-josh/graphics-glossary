@@ -45,7 +45,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import { GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
+	import { GLTFLoader, OrbitControls } from "three/addons";
 
 	const { promise: loadGLTF, resolve: resolveGLTF } =
 		Promise.withResolvers<Awaited<ReturnType<GLTFLoader["loadAsync"]>>>();

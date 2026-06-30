@@ -33,8 +33,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three";
-	import { OrbitControls } from "three/examples/jsm/Addons.js";
-	import { ShadowMesh } from "three/examples/jsm/objects/ShadowMesh.js";
+	import { OrbitControls, ShadowMesh } from "three/addons";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import { Pane } from "tweakpane";
 

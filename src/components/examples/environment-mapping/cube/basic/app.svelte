@@ -33,7 +33,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+	import { OrbitControls } from "three/addons";
 
 	const { promise: loadEnvironment, resolve } =
 		Promise.withResolvers<t.CubeTexture>();

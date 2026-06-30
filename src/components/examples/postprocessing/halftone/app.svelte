@@ -22,11 +22,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import {
-		GLTFLoader,
-		OrbitControls,
-		RoomEnvironment,
-	} from "three/examples/jsm/Addons.js";
+	import { GLTFLoader, OrbitControls, RoomEnvironment } from "three/addons";
 	import {
 		PI,
 		mix,

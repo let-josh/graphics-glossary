@@ -29,7 +29,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/Addons.js";
+	import { OrbitControls } from "three/addons";
 	import { lerp } from "three/src/math/MathUtils.js";
 	import { texture } from "three/tsl";
 

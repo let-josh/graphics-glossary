@@ -23,8 +23,8 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
+	import { OrbitControls } from "three/addons";
 	import { gaussianBlur } from "three/addons/tsl/display/GaussianBlurNode.js";
-	import { OrbitControls } from "three/examples/jsm/Addons.js";
 	import { DEG2RAD } from "three/src/math/MathUtils.js";
 	import { depth, texture, uniform, vec3 } from "three/tsl";
 	import { Pane } from "tweakpane";

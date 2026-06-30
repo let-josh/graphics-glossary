@@ -18,7 +18,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/Addons.js";
+	import { OrbitControls } from "three/addons";
 	import { texture, uniform, uv, vec2 } from "three/tsl";
 
 	const { promise: loadSpriteSheet, resolve } =

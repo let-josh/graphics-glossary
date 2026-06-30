@@ -5,6 +5,13 @@
 	const gltfLoader = new GLTFLoader();
 	setDRACOLoader(gltfLoader);
 	const hdrLoader = new HDRLoader();
+
+	// const chars = " %@";
+	const chars = " .:-=+*#%@";
+	// const chars = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+	const charsCount = chars.length;
+
+	const charSize = 32;
 </script>
 
 <script lang="ts">
@@ -26,11 +33,7 @@
 	import { setDRACOLoader } from "@functions/setDRACOLoader";
 
 	import * as t from "three/webgpu";
-	import {
-		GLTFLoader,
-		HDRLoader,
-		OrbitControls,
-	} from "three/examples/jsm/Addons.js";
+	import { GLTFLoader, HDRLoader, OrbitControls } from "three/addons";
 	import {
 		mix,
 		pass,
@@ -41,13 +44,6 @@
 		uniform,
 	} from "three/tsl";
 	import { Pane } from "tweakpane";
-
-	// const chars = " %@";
-	const chars = " .:-=+*#%@";
-	// const chars = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
-	const charsCount = chars.length;
-
-	const charSize = 32;
 
 	const scene = new t.Scene();
 

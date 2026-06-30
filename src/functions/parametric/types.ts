@@ -1,4 +1,4 @@
-import type { ParametricGeometry } from "three/examples/jsm/geometries/ParametricGeometry.js";
+import type { ParametricGeometry } from "three/addons";
 
 export type ParametricFunction = ConstructorParameters<
 	typeof ParametricGeometry

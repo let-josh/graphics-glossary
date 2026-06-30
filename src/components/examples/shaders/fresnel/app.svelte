@@ -25,7 +25,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+	import { OrbitControls } from "three/addons";
 	import { normalWorld, positionWorldDirection, uniform } from "three/tsl";
 	import { Pane } from "tweakpane";
 

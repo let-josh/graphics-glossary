@@ -37,8 +37,8 @@
 
 	import * as tsl from "three/tsl";
 	import * as t from "three/webgpu";
-	import { GLTFLoader } from "three/examples/jsm/Addons.js";
-	import type { GLTF } from "three/examples/jsm/Addons.js";
+	import { GLTFLoader } from "three/addons";
+	import type { GLTF } from "three/addons";
 	import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
 	import { Pane } from "tweakpane";
 

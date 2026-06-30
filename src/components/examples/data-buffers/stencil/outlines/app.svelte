@@ -22,7 +22,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/Addons.js";
+	import { OrbitControls } from "three/addons";
 	import { Pane } from "tweakpane";
 
 	const camera = new t.PerspectiveCamera().translateZ(7);

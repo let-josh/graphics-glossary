@@ -20,8 +20,7 @@
 	import { setCameraAspect } from "@functions/setCameraAspect";
 
 	import * as t from "three/webgpu";
-	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-	import { ParametricGeometry } from "three/examples/jsm/geometries/ParametricGeometry.js";
+	import { OrbitControls, ParametricGeometry } from "three/addons";
 
 	const material = new t.MeshNormalMaterial({
 		side: t.DoubleSide,
