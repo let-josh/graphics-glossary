@@ -28,7 +28,7 @@
 
 	const canvasSize = new Size();
 
-	const camera = new t.PerspectiveCamera(60, 1, 0.01, 1);
+	const camera = new t.PerspectiveCamera(60, 1, 0.01, 10);
 
 	const orbit = new OrbitControls(camera);
 
@@ -70,12 +70,8 @@
 
 	const getMesh = loadGltf.then((gltf) => {
 		const object = gltf.scene.getObjectByName(meshName);
-		if (isMesh(object)) {
-			object.rotateY(Math.PI);
-			return object;
-		}
-
-		return null;
+		if (!isMesh(object)) return null;
+		return object.rotateY(Math.PI);
 	});
 
 	const getMaterial = getMesh.then((mesh) => {

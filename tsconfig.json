@@ -6,7 +6,6 @@
 		"./worker-configuration.d.ts"
 	],
 	"compilerOptions": {
-		"noUncheckedIndexedAccess": true,
 		"baseUrl": ".",
 		"module": "esnext",
 		"paths": {
